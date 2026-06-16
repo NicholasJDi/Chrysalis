@@ -1,2 +1,2 @@
 # Chrysalis
- Music Player
+ A Music Player which will be cross platform, with the main selling point of data orginization and extremaly dynamic mpris intergration (I'll do my best to make ok windows and mac intergration, but this is built *for* linux)
