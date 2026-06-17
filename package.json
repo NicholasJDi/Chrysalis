@@ -1,0 +1,25 @@
+{
+	"name": "Chrysalis",
+	"version": "0.1.0",
+	"description": "Music player",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron .",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NicholasJDi/Chrysalis.git"
+	},
+	"author": "NicholasJDi",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/NicholasJDi/Chrysalis/issues"
+	},
+	"homepage": "https://github.com/NicholasJDi/Chrysalis#readme",
+	"dependencies": {
+		"discord-rpc": "^4.0.1",
+		"electron": "^42.4.1",
+		"mpris-service": "^2.1.2"
+	}
+}
