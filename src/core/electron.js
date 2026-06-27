@@ -1,5 +1,5 @@
 const { ipcMain, systemPreferences } = require("electron");
 
-ipcMain.handle("get-accent-color", () => {
+ipcMain.handle("get-system-accent-color", () => {
 	return systemPreferences.getAccentColor();
 });

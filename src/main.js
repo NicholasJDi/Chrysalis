@@ -19,7 +19,7 @@ function createWindow() {
 		},
 	});
 
-	window.loadFile("renderer/index.html");
+	window.loadFile("src/renderer/index.html");
 	window.maximize();
 }
 

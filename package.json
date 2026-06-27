@@ -2,7 +2,7 @@
 	"name": "Chrysalis",
 	"version": "0.1.0",
 	"description": "Music player",
-	"main": "main.js",
+	"main": "src/main.js",
 	"scripts": {
 		"start": "electron .",
 		"test": "echo \"Error: no test specified\" && exit 1"
@@ -20,7 +20,10 @@
 	"dependencies": {
 		"commander": "^15.0.0",
 		"discord-rpc": "^4.0.1",
-		"electron": "^42.4.1",
-		"mpris-service": "^2.1.2"
+		"mpris-service": "^2.1.2",
+		"music-metadata": "^11.13.0"
+	},
+	"devDependencies": {
+		"electron": "^42.5.0"
 	}
 }

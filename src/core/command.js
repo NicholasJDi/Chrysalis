@@ -101,7 +101,8 @@ function parseCommand() {
 
 function executeCommand(data) {
 	const request = JSON.parse(data)
-	console.log(JSON.stringify(request))
+	console.log(`Command '${request.command}' has been requested with args: ${JSON.stringify(request.args)}`)
+	
 	switch (request.command) {
 		case "show":
 			if (window) {
