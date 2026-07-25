@@ -1,5 +1,6 @@
-const { ipcMain } = require("electron");
+const rpc = require("../rpc");
 
 module.exports = {
-	plugins: require("./plugins")
-}
+	plugins: require("./plugins"),
+	metadata: require("./plugins")
+};

@@ -3,5 +3,6 @@ module.exports = {
 	settings: require('./settings'),
 	library: require('./library'),
 	player: require('./player'),
-	command: require('./command')
-}
+	command: require('./command'),
+	rpc: require('./rpc')
+};

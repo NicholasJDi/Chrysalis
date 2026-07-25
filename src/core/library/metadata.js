@@ -1,9 +1,10 @@
-const { ipcMain } = require("electron");
+const rpc = require("../rpc");
 const musicMetadata = require("music-metadata");
 
-ipcMain.handle("library:get-metadata", async (event, path) => {
+rpc.handle("library:get-metadata", async (event, path) => {
 	try {
-		return await musicMetadata.parseFile(path);
+		const metadata = await musicMetadata.parseFile(path);
+		return metadata.common;
 	} catch (err) {
 		console.warn(`Could not obtain metadata from file: ${path}`);
 		return err;

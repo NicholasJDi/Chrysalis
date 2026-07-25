@@ -1,0 +1,35 @@
+{
+	"uuid":"mpris@chrysalis",
+	"name":"MPRIS Integration",
+	"description": "Linux MPRIS Integration for Chrysalis",
+	"author": "NicholasJDi",
+	"version": "0.1.0",
+	"permissions": {
+		"main": [
+			"player:play-pause",
+			"player:play",
+			"player:pause",
+			"player:stop",
+			"player:get-time",
+			"player:set-time",
+			"player:shift-time",
+			"player:set-volume",
+			"player:next",
+			"player:prev",
+			"player:loop",
+			"player:shuffle",
+			"player:open",
+			"app:raise",
+			"app:quit"
+		],
+		"subscribe": [
+			"metadata-changed",
+			"loop-changed",
+			"shuffle-changed",
+			"state-changed",
+			"position-changed",
+			"seeked",
+			"volume-changed"
+		]
+	}
+}

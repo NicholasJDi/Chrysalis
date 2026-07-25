@@ -1,5 +1,6 @@
-const { ipcMain, systemPreferences } = require("electron");
+const rpc = require("./rpc");
+const { systemPreferences } = require("electron");
 
-ipcMain.handle("get-system-accent-color", () => {
+rpc.handle("get-system-accent-color", () => {
 	return systemPreferences.getAccentColor();
 });

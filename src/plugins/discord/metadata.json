@@ -1,0 +1,7 @@
+{
+	"uuid":"discord@chrysalis",
+	"name":"Discord Integration",
+	"description": "Discord RPC for Chrysalis",
+	"author": "NicholasJDi",
+	"version": "0.1.0"
+}

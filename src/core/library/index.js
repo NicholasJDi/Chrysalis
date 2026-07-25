@@ -1,11 +1,11 @@
-const { ipcMain } = require("electron");
+const rpc = require("../rpc");
 const fs = require("fs/promises");
 const path = require("path");
 
-const AUDIO_FORMATS = ['.mp3','.ogg','.wav','.flac','.m4a','.opus']
+const AUDIO_FORMATS = ['.mp3','.ogg','.wav','.flac','.m4a','.opus'];
 const IMAGE_FORMATS = ['.png','.jpeg','.jpg','.webp','svg']
 
-ipcMain.handle("library:scan", async (event, directory, type, recursive) =>{
+rpc.handle("library:scan", async (event, directory, type, recursive) => {
 	let extensions = [];
 	switch (type) {
 		case "audio":
@@ -42,4 +42,4 @@ async function scanDirectory(directory, extensions, recursive) {
 module.exports = {
 	metadata: require("./metadata"),
 	scanDirectory
-}
+};

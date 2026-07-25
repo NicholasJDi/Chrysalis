@@ -1,11 +1,11 @@
 {
-	"name": "Chrysalis",
-	"version": "0.1.0",
+	"name": "chrysalis",
+	"version": "0.2.0",
 	"description": "Music player",
 	"main": "src/main.js",
 	"scripts": {
 		"start": "electron .",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"dist": "electron-builder"
 	},
 	"repository": {
 		"type": "git",
@@ -21,9 +21,54 @@
 		"commander": "^15.0.0",
 		"discord-rpc": "^4.0.1",
 		"mpris-service": "^2.1.2",
+		"mpv": "^2.0.3",
 		"music-metadata": "^11.13.0"
 	},
 	"devDependencies": {
-		"electron": "^42.5.0"
+		"electron": "^42.5.0",
+		"electron-builder": "^26.15.3"
+	},
+	"build": {
+		"productName":"Chrysalis",
+		"appId": "dev.nicholasjdi.chrysalis",
+		"files": [
+			"**/*"
+		],
+		"linux": {
+			"extraResources": [
+				{
+					"from": "src/resources/bin/linux",
+					"to": "src/resources/bin"
+				},
+				{
+					"from": "src/plugins/linux",
+					"to": "src/plugins"
+				}
+			]
+		},
+		"win": {
+			"extraResources": [
+				{
+					"from": "src/resources/bin/windows",
+					"to": "src/resources/bin"
+				},
+				{
+					"from": "src/plugins/windows",
+					"to": "src/plugins"
+				}
+			]
+		},
+		"mac": {
+			"extraResources": [
+				{
+					"from": "src/resources/bin/mac",
+					"to": "src/resources/bin"
+				},
+				{
+					"from": "src/plugins/mac",
+					"to": "src/plugins"
+				}
+			]
+		}
 	}
 }
