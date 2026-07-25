@@ -66,7 +66,7 @@ async function activatePlugin(plugin) {
 			invoke: (channel, ...args) => invoke(plugin.metadata.uuid, channel, ...args),
 			send: (channel, ...args) => send(plugin.metadata.uuid, channel, ...args),
 			handle: (channelName, listener, forbid = false) => handle(plugin.metadata.uuid, channelName, listener, forbid),
-			has: (channel) => has(plugin.metadata.uuid. channel)
+			has: (channel) => has(plugin.metadata.uuid, channel)
 		});
 	}
 }
