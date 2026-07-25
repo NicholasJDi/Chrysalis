@@ -143,24 +143,27 @@ function parseCommand() {
 	program
 		.command("shuffle")
 		.description('Get or set if the Playlist is shuffled')
-		.addArgument( new Argument("[shuffle]", '').choices(['On','Off','Toggle']))
+		.addArgument( new Argument("[shuffle]", 'Whether the Playlist should be shuffled or not').choices(['On','Off','Toggle']))
 		.action((shuffle) => sendCommand(["shuffle", shuffle]));
 
 	program
-		.command("open <uri>")
+		.command("open")
 		.description('Add to the Playlist and play a File or remote Url')
+		.argument("<uri>", 'The File or remote Url to open')
 		.action((uri) => sendCommand(["open", uri]));
 
 	program
-		.command("add <uri>")
+		.command("add")
 		.description('Add a File or remote Url to the Playlist')
+		.argument("<uri>", 'The File or remote Url to add')
 		.action((uri) => sendCommand(["add", uri]));
 
 	program
-		.command("close <uri>")
+		.command("close")
 		.alias("remove")
 		.alias("del")
 		.description('Remove a File or remote Url from the Playlist')
+		.argument("<uri>", 'The File or remote Url to remove')
 		.action((uri) => sendCommand(["close", uri]));
 
 	program
