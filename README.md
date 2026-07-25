@@ -4,7 +4,7 @@ A Cross Platform Music Player with the main selling point of data organization, 
 ## Testing it yourself
 Because this is an alpha project i don't feel the need to compile it yet, so if you want to try it out yourself you have to do a few things.
 ### Setup
-- Install Node.js (`[npm](https://github.com/npm/cli)` 10.9.8 and `node` 22.22.3)
+- Install Node.js ([`npm`](https://.com/npm/cli) 10.9.8 and [`node`](https://nodejs.org/) 22.22.3)
 - Run
 
   ```
