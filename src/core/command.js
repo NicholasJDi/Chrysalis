@@ -93,7 +93,8 @@ function parseCommand() {
 	program
 		.command("play")
 		.description("Play the current song")
-		.action(() => sendCommand(["play"]));
+		.argument("[id]", "Song id to play", valueNumber)
+		.action(id => sendCommand(["play", id]));
 
 	program
 		.command("pause")
@@ -104,7 +105,8 @@ function parseCommand() {
 		.command("play-pause")
 		.aliases(["playPause", "playpause"])
 		.description("Toggle playing the current song")
-		.action(() => sendCommand(["playPause"]));
+		.argument("[id]", "Song id to play", valueNumber)
+		.action(id => sendCommand(["playPause", id]));
 
 	program
 		.command("stop")
@@ -148,20 +150,12 @@ function parseCommand() {
 
 	program
 		.command("open")
-		.description('Add to the Playlist and play a File or remote Url')
+		.description('Add to the Playlist or play a File or remote Url')
 		.argument("<uri>", 'The File or remote Url to open')
 		.action((uri) => sendCommand(["open", uri]));
 
 	program
-		.command("add")
-		.description('Add a File or remote Url to the Playlist')
-		.argument("<uri>", 'The File or remote Url to add')
-		.action((uri) => sendCommand(["add", uri]));
-
-	program
 		.command("close")
-		.alias("remove")
-		.alias("del")
 		.description('Remove a File or remote Url from the Playlist')
 		.argument("<uri>", 'The File or remote Url to remove')
 		.action((uri) => sendCommand(["close", uri]));
@@ -199,7 +193,7 @@ async function executeCommand(data) {
 						return `Set volume to ${await rpc.invoke('player:set-volume', Number(request.args[0]))}%`;
 
 			case "play":
-				rpc.invoke('player:play');
+				rpc.invoke('player:play', request.args[0]);
 				return "Playing the current song";
 
 			case "pause":
@@ -207,7 +201,7 @@ async function executeCommand(data) {
 				return "Pausing the current song";
 
 			case "playPause":
-				const playing = await rpc.invoke('player:play-pause');
+				const playing = await rpc.invoke('player:play-pause', request.args[0]);
 				return `${playing ? "Playing" : "Pausing"} the current song`;
 
 			case "stop":
@@ -252,7 +246,7 @@ async function executeCommand(data) {
 					return `${await rpc.invoke("player:shuffle", request.args[0] === "On" ? true : request.args === "Off" ? false : !await rpc.invoke("player:get-shuffled")) ? "Shuffling" : "Unshuffling"} the Playlist`;
 
 			case "open":
-				const result = await rpc.invoke('player:open', request.args[0]);
+				const result = await rpc.invoke('library:open', request.args[0]);
 				if (!result.length)
 					return "Invalid Uri";
 				if (result[0])
@@ -260,17 +254,8 @@ async function executeCommand(data) {
 				else
 					return `Playing '${result[1]}'`;
 
-			case "add":
-				const result1 = await rpc.invoke('player:open', request.args[0], true);
-				if (!result1.length)
-					return "Invalid Uri";
-				if (result1[0])
-					return `Adding '${result1[1]}' to the Playlist`;
-				else
-					return `Moved '${result1[1]}' to the end of the Playlist`;
-
 			case "close":
-				const result2 = await rpc.invoke('player:close', request.args[0]);
+				const result2 = await rpc.invoke('library:close', request.args[0]);
 				if (!result2.length)
 					return "Invalid Uri";
 				if (result2[0])

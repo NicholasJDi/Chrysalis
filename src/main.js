@@ -35,11 +35,12 @@ if (!gotLock) {
 	// disable automatic mpris and related
 	app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
 	app.setName("Chrysalis");
-	app.whenReady().then(() => {
+	app.whenReady().then(async () => {
 		createWindow();
 		core.rpc.allowSends(window);
 		registerProcesses();
-		core.player.startPlayer();
+		await core.player.startPlayer();
+		core.library.init()
 		core.command.prepareServer();
 		plugins.doPluginStuff();
 		window.once('ready-to-show', async () => {
@@ -53,6 +54,7 @@ if (!gotLock) {
 			app.quit();
 		});
 		app.on("before-quit", () => {
+			rpc.invoke('library:save');
 			allowClose = true;
 		});
 		window.on("close", (event) => {

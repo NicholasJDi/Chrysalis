@@ -23,7 +23,14 @@
 		"album":"https://example.com/image.png",
 		"_explanationalbum":"cover art for all songs in the same album",
 		"override":"https://example.com/image.png",
-		"_explanationoverride":"cover art for this track spesificly"
+		"_explanationoverride":"cover art for this track spesificly",
+		"background":{
+			"_explanation":"16:9 art, works exactly the same as base 'crsim:art'",
+			"artist":"file:///home/nicholasjdi/Downloads/image.png",
+			"type":"file:///home/nicholasjdi/Downloads/image.png",
+			"album":"https://example.com/image.png",
+			"override":"https://example.com/image.png"
+		}
 	},
 	"mix":{
 		"_default":3,

@@ -29,17 +29,31 @@ async function startPlayer() {
 		// the current status, true = Playing, false = Paused, null = Stopped.
 		let playing = false;
 		// the stopped id, this is used internally instead of 'playing'
-		// -1 = playing/paused, 0 = stopped with no previous song, 1+ = the id of the song that was playing before Chrysalis was stopped.
+		// -1 = playing/paused, 0 = stopped with no previous song, 1+ = the libraryId of the song that was playing before Chrysalis was stopped.
 		let stopped = 0;
 		// the current time of the playing song
 		let position = 0;
+		// track index of mpvId -> LibraryId
+		let idIndex = {}
+		// if after 'player:replace' there is a untracked song
+		let reloading = false
 
 		// built in methods
-		rpc.handle('player:play-pause', async () => {
+		rpc.handle('player:play-pause', async (event, id) => {
 			try {
-				if (stopped > 0) {
+				const ids = Object.values(idIndex);
+				if (playing !== true && ids.includes(id)) {
 					const playlist = await player.get('playlist');
-					const index = playlist.findIndex(song => song.id === stopped);
+					const index = playlist.findIndex(song => idIndex[song.id] === id);
+					if (index !== -1) {
+						await player.command('playlist-play-index', index);
+						await player.set('pause', false);
+						stopped = -1;
+						return true;
+					}
+				} else if (stopped > 0) {
+					const playlist = await player.get('playlist');
+					const index = playlist.findIndex(song => idIndex[song.id] === stopped);
 					if (index !== -1) {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
@@ -57,16 +71,26 @@ async function startPlayer() {
 					return !play;
 				}
 			} catch (e) {
-				console.error(`player:play-pause exeption: ${e}`);
+				console.error(`player:play-pause exception: ${e}`);
 				return null;
 			}
 		});
 
-		rpc.handle('player:play', async () => {
+		rpc.handle('player:play', async (event, id) => {
 			try {
-				if (stopped > 0) {
+				if (typeof id === "number") id = id.toString()
+				const ids = Object.values(idIndex);
+				if (ids.includes(id)) {
 					const playlist = await player.get('playlist');
-					const index = playlist.findIndex(song => song.id === stopped);
+					const index = playlist.findIndex(song => idIndex[song.id] === id);
+					if (index !== -1) {
+						await player.command('playlist-play-index', index);
+						await player.set('pause', false);
+						stopped = -1;
+					}
+				} else if (stopped > 0) {
+					const playlist = await player.get('playlist');
+					const index = playlist.findIndex(song => idIndex[song.id] === stopped);
 					if (index !== -1) {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
@@ -80,7 +104,7 @@ async function startPlayer() {
 					await player.set('pause', false);
 				}
 			} catch (e) {
-				console.error(`player:play exeption: ${e}`);
+				console.error(`player:play exception: ${e}`);
 			}
 		});
 
@@ -88,7 +112,7 @@ async function startPlayer() {
 			try {
 				player.set('pause', true);
 			} catch (e) {
-				console.error(`player:pause exeption: ${e}`);
+				console.error(`player:pause exception: ${e}`);
 			}
 		});
 
@@ -97,7 +121,7 @@ async function startPlayer() {
 				const pos = await player.get('playlist-pos');
 				if (pos !== -1) {
 					const playlist = await player.get('playlist');
-					stopped = playlist[pos].id;
+					stopped = idIndex[playlist[pos].id];
 					await player.set('pause', true);
 					await player.command('stop', 'keep-playlist');
 				} else if (unsafe) {
@@ -106,7 +130,7 @@ async function startPlayer() {
 					await player.command('stop', 'keep-playlist');
 				}
 			} catch (e) {
-				console.error(`player:stop exeption: ${e}`);
+				console.error(`player:stop exception: ${e}`);
 			}
 		});
 
@@ -132,7 +156,7 @@ async function startPlayer() {
 					stopped = -1;
 				}
 			} catch (e) {
-				console.error(`player:next exeption: ${e}`);
+				console.error(`player:next exception: ${e}`);
 			}
 		});
 
@@ -163,7 +187,7 @@ async function startPlayer() {
 					stopped = -1;
 				}
 			} catch (e) {
-				console.error(`player:prev exeption: ${e}`)
+				console.error(`player:prev exception: ${e}`)
 			}
 		});
 
@@ -181,23 +205,68 @@ async function startPlayer() {
 				}
 				return loop;
 			} catch (e) {
-				console.error(`player:loop exeption: ${e}`);
+				console.error(`player:loop exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:shuffle', (event, status, safe) => {
+		rpc.handle('player:shuffle', (event, status) => {
 			try {
-				if (!safe) shuffled = status;
+				if (status !== null) shuffled = status;
 				if (shuffled) {
 					player.command('playlist-shuffle');
-					if (!safe) rpc.invoke('plugins:shuffle-changed', true);
+					if (status !== null) rpc.invoke('plugins:shuffle-changed', true);
 				} else {
 					player.command('playlist-unshuffle');
-					if (!safe) rpc.invoke('plugins:shuffle-changed', false);
+					if (status !== null) rpc.invoke('plugins:shuffle-changed', false);
 				}
 				return shuffled;
 			} catch (e) {
-				console.error(`player:shuffle exeption: ${e}`);
+				console.error(`player:shuffle exception: ${e}`);
+			}
+		});
+
+		rpc.handle('player:replace', async (event, ids, paths) => {
+			try {
+				if (!ids?.length || !paths?.length || ids.length !== paths.length) return;
+				reloading = false
+				await player.command('playlist-clear');
+				const playlist = await player.get('playlist');
+				let song = -1;
+				if (playlist.length) {
+					song = idIndex[playlist[0].id];
+					reloading = true
+				}
+				idIndex = {};
+				for (const id of ids) {
+					if (id === song) {
+						const count = await player.get('playlist-count');
+						await player.command('playlist-move', 0, count);
+						const playlist = await player.get('playlist');
+						const index = playlist[await player.get('playlist-pos')].id
+						idIndex[index] = id;
+						reloading = false;
+					} else {
+						const path = ids.findIndex(index => index === id);
+						if (path === -1) continue;
+						const uri = await rpc.invoke('library:uri', paths[path]);
+						const index = (await player.command('loadfile', uri, 'append')).playlist_entry_id;
+						idIndex[index] = id;
+					}
+				}
+				rpc.invoke('player:shuffle', null);
+			} catch (e) {
+				console.error(`player:replace exception: ${e}`);
+			}
+		});
+
+		rpc.handle('player:list', async () => {
+			try {
+				const playlist = await player.get('playlist');
+				let list = (await Promise.allSettled(playlist.map(async song => `${idIndex[song.id]}: ${await rpc.invoke('library:uri', song.filename)}`))).map(promise => promise.value);
+				if (reloading) list[0] = `(cached) ${list[0]}`;
+				return list;
+			} catch (e) {
+				console.error(`player:replace exception: ${e}`);
 			}
 		});
 
@@ -205,7 +274,7 @@ async function startPlayer() {
 			try {
 				return position;
 			} catch (e) {
-				console.error(`player:get-time exeption: ${e}`);
+				console.error(`player:get-time exception: ${e}`);
 			}
 		});
 
@@ -214,7 +283,7 @@ async function startPlayer() {
 				await player.command('seek', time, "absolute");
 				return await player.get('time-pos');
 			} catch (e) {
-				console.error(`player:set-time exeption: ${e}`);
+				console.error(`player:set-time exception: ${e}`);
 			}
 		});
 
@@ -223,7 +292,7 @@ async function startPlayer() {
 				await player.command('seek', offset);
 				return await player.get('time-pos');
 			} catch (e) {
-				console.error(`player:shift-time exeption: ${e}`);
+				console.error(`player:shift-time exception: ${e}`);
 			}
 		});
 
@@ -231,7 +300,7 @@ async function startPlayer() {
 			try {
 				return await player.get('volume');
 			} catch (e) {
-				console.error(`player:get-volume exeption: ${e}`);
+				console.error(`player:get-volume exception: ${e}`);
 			}
 		});
 
@@ -240,7 +309,7 @@ async function startPlayer() {
 				await player.set('volume', Math.abs(Math.min(volume, 130)));
 				return await rpc.invoke('player:get-volume');
 			} catch (e) {
-				console.error(`player:set-volume exeption: ${e}`);
+				console.error(`player:set-volume exception: ${e}`);
 			}
 		});
 
@@ -250,7 +319,7 @@ async function startPlayer() {
 				await player.set('volume', volume);
 				return volume;
 			} catch (e) {
-				console.error(`player:shift-volume exeption: ${e}`);
+				console.error(`player:shift-volume exception: ${e}`);
 			}
 		});
 
@@ -258,7 +327,7 @@ async function startPlayer() {
 			try {
 				return playing;
 			} catch (e) {
-				console.error(`player:get-status exeption: ${e}`);
+				console.error(`player:get-status exception: ${e}`);
 			}
 		});
 
@@ -266,7 +335,7 @@ async function startPlayer() {
 			try {
 				return looping;
 			} catch (e) {
-				console.error(`player:get-looping exeption: ${e}`);
+				console.error(`player:get-looping exception: ${e}`);
 			}
 		});
 
@@ -274,83 +343,16 @@ async function startPlayer() {
 			try {
 				return shuffled;
 			} catch (e) {
-				console.error(`player:get-shuffled exeption: ${e}`);
+				console.error(`player:get-shuffled exception: ${e}`);
 			}
 		});
-
-		// temporary methods
-		rpc.handle('player:open', async (event, path, append) => {
-			try {
-				const uri = forceUri(path);
-				const check = new URL(uri);
-				const playlist = await player.get('playlist');
-				const has = playlist.findIndex(song => compareUris(forceUri(song.filename), uri));
-				if (has === -1) {
-					await player.command('loadfile', uri, 'append');
-					if (!append) {
-						const count = await player.get('playlist-count') - 1;
-						await player.command('playlist-play-index', count);
-						await player.set('pause', false);
-						stopped = -1;
-					}
-					return [true, check.href];
-				} else {
-					if (!append) {
-						await player.command('playlist-play-index', has);
-						await player.set('pause', false);
-						stopped = -1;
-					} else {
-						const count = await player.get('playlist-count') - 1;
-						await player.command('playlist-move', has, count);
-					}
-					return [false, check.href];
-				}
-			} catch (e) {
-				console.error(`player:open exeption: ${e}`);
-				return [];
-			}
-		});
-
-		rpc.handle('player:close', async (event, path) => {
-			try {
-				const uri = forceUri(path);
-				const check = new URL(uri);
-				const playlist = await player.get('playlist');
-				const has = playlist.findIndex(song => compareUris(forceUri(song.filename), uri));
-				if (has !== -1) {
-					await player.command('playlist-remove', has);
-					return [true, check.href];
-				} else return [false, check.href];
-			} catch (e) {
-				console.error(`player:close exeption: ${e}`);
-				return [];
-			}
-		});
-
-		rpc.handle('player:replace', async (event, playlist) => {
-			try {
-				await player.set('playlist', playlist);
-				rpc.invoke('player:shuffle', true);
-			} catch (e) {
-				console.error(`player:replace exeption: ${e}`);
-			}
-		});
-
-		rpc.handle('player:list', async () => {
-			try {
-				const list = await player.get('playlist');
-				return list.map(song => forceUri(song.filename));
-			} catch (e) {
-				console.error(`player:replace exeption: ${e}`);
-			}
-		})
 
 		// dangerous methods
 		rpc.handle('player:get', async (event, ...args) => {
 			try {
 				return await player.get(...args);
 			} catch (e) {
-				console.error(`player:get exeption: ${e}`);
+				console.error(`player:get exception: ${e}`);
 			}
 		});
 
@@ -358,7 +360,7 @@ async function startPlayer() {
 			try {
 				return await player.set(...args);
 			} catch (e) {
-				console.error(`player:set exeption: ${e}`);
+				console.error(`player:set exception: ${e}`);
 			}
 		});
 
@@ -366,7 +368,7 @@ async function startPlayer() {
 			try {
 				return await player.on(...args);
 			} catch (e) {
-				console.error(`player:on exeption: ${e}`);
+				console.error(`player:on exception: ${e}`);
 			}
 		});
 
@@ -374,7 +376,7 @@ async function startPlayer() {
 			try {
 				return await player.observe(...args);
 			} catch (e) {
-				console.error(`player:observe exeption: ${e}`);
+				console.error(`player:observe exception: ${e}`);
 			}
 		});
 
@@ -382,7 +384,7 @@ async function startPlayer() {
 			try {
 				return await player.command(...args);
 			} catch (e) {
-				console.error(`player:command exeption: ${e}`);
+				console.error(`player:command exception: ${e}`);
 			}
 		});
 
@@ -422,6 +424,7 @@ async function startPlayer() {
 
 		player.observe('time-pos', time => {
 			position = time;
+			rpc.invoke('metadata:position-changed', time)
 			rpc.invoke('plugins:position-changed', time);
 		});
 
@@ -430,14 +433,19 @@ async function startPlayer() {
 		});
 
 		player.observe('metadata', async metadata => {
+			if (reloading && await player.get('playlist-pos') !== 0) {
+				reloading = false
+				await player.command('playlist-remove', 0);
+			}
 			if (metadata) {
 				const playlist = await player.get('playlist');
 				const current = playlist[await player.get('playlist-pos')];
-				metadata.id = current.id;
-				metadata.url = forceUri(current.filename);
+				metadata.id = idIndex[current.id];
+				metadata.url = rpc.invoke('library:uri', current.filename);
 				metadata.length = await player.get('duration');
 			}
-			rpc.invoke('plugins:metadata-changed', metadata);
+			rpc.invoke('library:track-changed', metadata?.id ?? 0)
+			rpc.invoke('metadata:update', metadata);
 		});
 
 		player.on('seek', () => {
@@ -445,40 +453,11 @@ async function startPlayer() {
 		});
 
 		// default stuff
-		rpc.invoke('player:set-volume', 50);
+		await rpc.invoke('player:set-volume', 50);
 	} catch (e) {
-		console.error(e);
+		console.error(`Player failed to start ${e}`);
 	}
 }
-
-function compareUris(uri1, uri2) {
-	try {
-		return new URL(uri1).href === new URL(uri2).href;
-	} catch (e) {
-		console.error(e)
-		return false;
-	}
-};
-
-function forceUri(uri) {
-	try {
-		if (uri.startsWith('/')) uri = 'file://' + uri
-		if (new URL(uri)) return uri;
-	} catch (e) {
-		try {
-			const uri1 = encodeURI(uri);
-			if (new URL(uri1)) return uri1;
-		} catch (e) {
-			try {
-				const uri2 = encodeURIComponent(uri);
-				if (new URL(uri2)) return uri2;
-			} catch (e) {
-				throw new Error(`Could not force Uri '${uri}': ${e}`);
-			}
-		}
-	}
-}
-
 
 module.exports = {
 	startPlayer
