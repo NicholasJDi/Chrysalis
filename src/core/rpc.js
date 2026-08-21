@@ -19,9 +19,9 @@ function has(channel) {
 }
 
 // invoke a channel from main
-async function invoke(channel, ...args) {
+function invoke(channel, ...args) {
 	if (!handlers[channel]) throw new Error(`There is no handler for the requested channel '${channel}'`);
-	return await handlers[channel](null, ...args);
+	return handlers[channel](null, ...args);
 }
 
 // send data to the renderer

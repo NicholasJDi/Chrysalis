@@ -87,6 +87,7 @@ async function startPlayer() {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
 						stopped = -1;
+						return playlist[index].filename;
 					}
 				} else if (stopped > 0) {
 					const playlist = await player.get('playlist');
@@ -191,17 +192,17 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:loop', (event, loop) => {
+		rpc.handle('player:loop', async (event, loop) => {
 			try {
 				if (loop) {
-					player.set('loop-file','no');
-					player.set('loop-playlist','inf');
+					await player.set('loop-file','no');
+					await player.set('loop-playlist','inf');
 				} else {
-					player.set('loop-playlist','no')
+					await player.set('loop-playlist','no')
 					if (loop === null)
-						player.set('loop-file','inf');
+						await player.set('loop-file','inf');
 					else
-						player.set('loop-file','no');
+						await player.set('loop-file','no');
 				}
 				return loop;
 			} catch (e) {
@@ -280,7 +281,7 @@ async function startPlayer() {
 
 		rpc.handle('player:set-time', async (event, time) => {
 			try {
-				await player.command('seek', time, "absolute");
+				await player.command('seek', time, "absolute+exact");
 				return await player.get('time-pos');
 			} catch (e) {
 				console.error(`player:set-time exception: ${e}`);
@@ -289,7 +290,7 @@ async function startPlayer() {
 
 		rpc.handle('player:shift-time', async (event, offset) => {
 			try {
-				await player.command('seek', offset);
+				await player.command('seek', offset, "relative+exact");
 				return await player.get('time-pos');
 			} catch (e) {
 				console.error(`player:shift-time exception: ${e}`);
@@ -388,18 +389,14 @@ async function startPlayer() {
 			}
 		});
 
-		// when i do library i need to set playlist to a proper song list WITH the id's stored in the database,
-		// with the current setup this would make ID be the proper database id automatically,
-		// and would also keep id's consistant across searches and albums
-
 		// other
 		player.observe('eof-reached', async eof => {
 			const pos = await player.get('playlist-pos');
 			if (pos === -1 && stopped === -1) await rpc.invoke('player:stop', true);
 		});
-		player.observe('idle-active', async stopped => {
-			if (stopped) rpc.invoke('plugins:state-changed', null);
-			if (stopped) playing = null;
+		player.observe('idle-active', async idle => {
+			if (idle) rpc.invoke('plugins:state-changed', null);
+			if (idle) playing = null;
 		});
 		player.observe('pause', paused => {
 			rpc.invoke('plugins:state-changed', !paused);
@@ -424,7 +421,7 @@ async function startPlayer() {
 
 		player.observe('time-pos', time => {
 			position = time;
-			rpc.invoke('metadata:position-changed', time)
+			rpc.invoke('metadata:position-changed', time);
 			rpc.invoke('plugins:position-changed', time);
 		});
 
@@ -444,8 +441,7 @@ async function startPlayer() {
 				metadata.url = rpc.invoke('library:uri', current.filename);
 				metadata.length = await player.get('duration');
 			}
-			rpc.invoke('library:track-changed', metadata?.id ?? 0)
-			rpc.invoke('metadata:update', metadata);
+			await rpc.invoke('library:track-changed', metadata?.id ?? 0, metadata?.length);
 		});
 
 		player.on('seek', () => {

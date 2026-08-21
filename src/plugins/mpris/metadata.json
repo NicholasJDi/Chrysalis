@@ -18,7 +18,7 @@
 			"player:prev",
 			"player:loop",
 			"player:shuffle",
-			"player:open",
+			"library:open",
 			"app:raise",
 			"app:quit"
 		],

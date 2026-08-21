@@ -38,15 +38,15 @@ if (!gotLock) {
 	app.whenReady().then(async () => {
 		createWindow();
 		core.rpc.allowSends(window);
-		registerProcesses();
-		await core.player.startPlayer();
-		core.library.init()
-		core.command.prepareServer();
-		plugins.doPluginStuff();
 		window.once('ready-to-show', async () => {
 			await window.maximize();
 			window.show();
 		});
+		registerProcesses();
+		await core.player.startPlayer();
+		core.library.init()
+		core.command.prepareServer();
+		await plugins.doPluginStuff();
 	});
 
 	function registerProcesses() {
@@ -54,7 +54,6 @@ if (!gotLock) {
 			app.quit();
 		});
 		app.on("before-quit", () => {
-			rpc.invoke('library:save');
 			allowClose = true;
 		});
 		window.on("close", (event) => {

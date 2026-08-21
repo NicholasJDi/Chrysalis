@@ -18,7 +18,9 @@ function prepareServer() {
 		socket.on("data", async data => {
 			const response = await executeCommand(data.toString());
 
-			socket.write(response);
+			if (socket.writable) {
+				socket.write(response);
+			}
 			socket.end();
 		});
 	});
