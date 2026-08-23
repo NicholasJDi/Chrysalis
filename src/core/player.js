@@ -164,7 +164,10 @@ async function startPlayer() {
 		rpc.handle('player:prev', async () => {
 			try {
 				if (stopped === -1) {
-					const time = await player.get('time-pos');
+					let time = 0;
+					try {
+						time = await player.get('time-pos');
+					} catch {}
 					const pos = await player.get('playlist-pos');
 					if (time > 5) {
 						await player.command('playlist-play-index', pos);
@@ -194,15 +197,12 @@ async function startPlayer() {
 
 		rpc.handle('player:loop', async (event, loop) => {
 			try {
+				await player.set('loop-file','no');
+				await player.set('loop-playlist','no')
 				if (loop) {
-					await player.set('loop-file','no');
 					await player.set('loop-playlist','inf');
-				} else {
-					await player.set('loop-playlist','no')
-					if (loop === null)
-						await player.set('loop-file','inf');
-					else
-						await player.set('loop-file','no');
+				} else if (loop === null) {
+					await player.set('loop-file','inf');
 				}
 				return loop;
 			} catch (e) {
@@ -264,7 +264,7 @@ async function startPlayer() {
 			try {
 				const playlist = await player.get('playlist');
 				let list = (await Promise.allSettled(playlist.map(async song => `${idIndex[song.id]}: ${await rpc.invoke('library:uri', song.filename)}`))).map(promise => promise.value);
-				if (reloading) list[0] = `(cached) ${list[0]}`;
+				if (reloading) list[0] = list[0].replace("undefined", '(cached)')
 				return list;
 			} catch (e) {
 				console.error(`player:replace exception: ${e}`);
@@ -390,10 +390,6 @@ async function startPlayer() {
 		});
 
 		// other
-		player.observe('eof-reached', async eof => {
-			const pos = await player.get('playlist-pos');
-			if (pos === -1 && stopped === -1) await rpc.invoke('player:stop', true);
-		});
 		player.observe('idle-active', async idle => {
 			if (idle) rpc.invoke('plugins:state-changed', null);
 			if (idle) playing = null;
@@ -403,45 +399,60 @@ async function startPlayer() {
 			playing = !paused;
 		});
 
+		player.observe('playlist-pos', async pos => {
+			if (reloading && await player.get('playlist-pos') !== 0) {
+				reloading = false
+				await player.command('playlist-remove', 0);
+			}
+
+			let id = 0;
+			if (pos === -1) {
+				await rpc.invoke('player:stop', true);
+			} else {
+				const playlist = await player.get('playlist');
+				const current = playlist[pos];
+				id = idIndex[current.id];
+			}
+			await rpc.invoke('library:track-changed', id);
+		});
+
 		player.observe('loop-playlist', loop => {
 			if (loop === "inf") {
 				looping = true;
 				rpc.invoke("plugins:loop-changed",true)
+			} else {
+				looping = false;
+				rpc.invoke("plugins:loop-changed",false)
 			}
 		});
 		player.observe('loop-file', loop => {
-			if (!loop) {
-				looping = false;
-				rpc.invoke("plugins:loop-changed",false)
-			} else if (loop === "inf") {
+			if (loop === "inf") {
 				looping = null;
 				rpc.invoke("plugins:loop-changed",null)
+			} else {
+				looping = false;
+				rpc.invoke("plugins:loop-changed",false)
 			}
 		});
 
 		player.observe('time-pos', time => {
-			position = time;
-			rpc.invoke('metadata:position-changed', time);
-			rpc.invoke('plugins:position-changed', time);
+			position = Math.max(time, 0);
+			rpc.invoke('metadata:position-changed', position);
+			rpc.invoke('plugins:position-changed', position);
 		});
 
 		player.observe('volume', volume => {
 			rpc.invoke('plugins:volume-changed', volume);
 		});
 
-		player.observe('metadata', async metadata => {
-			if (reloading && await player.get('playlist-pos') !== 0) {
-				reloading = false
-				await player.command('playlist-remove', 0);
-			}
-			if (metadata) {
-				const playlist = await player.get('playlist');
-				const current = playlist[await player.get('playlist-pos')];
-				metadata.id = idIndex[current.id];
-				metadata.url = rpc.invoke('library:uri', current.filename);
-				metadata.length = await player.get('duration');
-			}
-			await rpc.invoke('library:track-changed', metadata?.id ?? 0, metadata?.length);
+		player.observe('duration', async duration => {
+			if (stopped !== -1) return;
+			const pos = await player.get('playlist-pos'); 
+			const playlist = await player.get('playlist');
+			const current = playlist[pos];
+			if (!current) return;
+			id = idIndex[current.id];
+			rpc.invoke('metadata:duration-changed', id, duration);
 		});
 
 		player.on('seek', () => {

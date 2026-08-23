@@ -33,27 +33,26 @@ function _init(api) {
 	});
 }
 
-function _playerMetadataChanged(metadata) {
+async function _playerMetadataChanged(metadata, processed) {
 	const data = {};
 	// mpris (Media Player Remote Interfacing Specification)
-	if (metadata?.["_processed"]?.id) data['mpris:trackid'] = player.objectPath(`track/${metadata["_processed"].id}`);
+	if (processed?.id) data['mpris:trackid'] = player.objectPath(`track/${processed.id}`);
 	if (metadata?.length) data['mpris:length'] = metadata.length * 1_000_000;
-	if (metadata?.["_processed"]?.art?.["_default"]) data['mpris:artUrl'] = metadata["_processed"].art["_default"];
+	if (processed?.art?.["_default"]) data['mpris:artUrl'] = processed.art["_default"];
 	// xesam (eXtEnsible Search And Metadata)
 	if (metadata?.path) data['xesam:url'] = metadata.path;
-	if (metadata?.["_processed"]?.title) data['xesam:title'] = metadata["_processed"].title;
-	if (metadata?.["_processed"]?.artists) data['xesam:artist'] = metadata["_processed"].artists;
-	if (metadata?.["_processed"]?.album) data['xesam:album'] = metadata["_processed"].album;
-	if (metadata?.["_processed"]?.genre) data['xesam:genre'] = metadata["_processed"].genre;
-	if (metadata?.["_processed"]?.art?.artists) data['xesam:albumArtist'] = metadata["_processed"].art.artists;
-	if (metadata?.["_processed"]?.disc) data['xesam:discNumber'] = metadata["_processed"].disc.toString()
-	if (metadata?.["_processed"]?.track) data['xesam:trackNumber'] = metadata["_processed"].track.toString()
-	if (metadata?.["_processed"]?.bpm) data['xesam:audioBPM'] = metadata["_processed"].bpm.toString()
+	if (processed?.title) data['xesam:title'] = processed.title;
+	if (processed?.artists) data['xesam:artist'] = processed.artists;
+	if (processed?.album) data['xesam:album'] = processed.album;
+	if (processed?.genre) data['xesam:genre'] = processed.genre;
+	if (processed?.art?.artists) data['xesam:albumArtist'] = processed.art.artists;
+	if (processed?.disc) data['xesam:discNumber'] = processed.disc.toString()
+	if (processed?.track) data['xesam:trackNumber'] = processed.track.toString()
+	if (processed?.bpm) data['xesam:audioBPM'] = processed.bpm.toString()
 	// crsim (Customizable, Rich, Supplemental Information Metadata / ChRySalIs Metadata)
-	delete metadata.path;
+	const crsim = await API.invoke("metadata:flatten", metadata);
 
-
-	player.metadata = data;
+	player.metadata = { ...data, ...crsim };
 }
 
 function _playerLoopChanged(looping) {

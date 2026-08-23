@@ -201,8 +201,8 @@ function subscribe(id, call, ...args) {
 	}
 }
 
-rpc.handle('plugins:metadata-changed', (event, metadata) => {
-	subscribe('metadata-changed', "playerMetadataChanged", metadata);
+rpc.handle('plugins:metadata-changed', (event, metadata, processed) => {
+	subscribe('metadata-changed', "playerMetadataChanged", metadata, processed);
 });
 
 rpc.handle('plugins:loop-changed', (event, looping) => {

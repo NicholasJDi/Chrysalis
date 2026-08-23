@@ -97,7 +97,7 @@ rpc.handle('library:close', async (event, uri) => {
 });
 
 rpc.handle('library:track-changed', async (event, id, length) => {
-	if (rpc.invoke('metadata:get', id, "length") !== length) rpc.invoke('metadata:set', id, length, "length");
+	if (length && rpc.invoke('metadata:get', id, "length") !== length) rpc.invoke('metadata:set', id, length, "length");
 	rpc.invoke('metadata:update', id);
 });
 

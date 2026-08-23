@@ -19,6 +19,7 @@
 			"player:loop",
 			"player:shuffle",
 			"library:open",
+			"metadata:flatten",
 			"app:raise",
 			"app:quit"
 		],
