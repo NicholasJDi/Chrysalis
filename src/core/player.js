@@ -2,7 +2,7 @@ const { app } = require("electron");
 const rpc = require("./rpc");
 const Mpv = require("mpv").default;
 
-// the mpv file
+// the mpv file (renamed to fix some issues with audio source display)
 const path = process.platform === "win32"
 	? "src/resources/bin/Chrysalis.exe"
 	: "src/resources/bin/Chrysalis";
@@ -31,16 +31,15 @@ async function startPlayer() {
 		// the stopped id, this is used internally instead of 'playing'
 		// -1 = playing/paused, 0 = stopped with no previous song, 1+ = the libraryId of the song that was playing before Chrysalis was stopped.
 		let stopped = 0;
-		// the current time of the playing song
-		let position = 0;
 		// track index of mpvId -> LibraryId
-		let idIndex = {}
+		let idIndex = {};
 		// if after 'player:replace' there is a untracked song
-		let reloading = false
+		let reloading = false;
 
 		// built in methods
 		rpc.handle('player:play-pause', async (event, id) => {
 			try {
+				if (typeof id === "number") id = id.toString();
 				const ids = Object.values(idIndex);
 				if (playing !== true && ids.includes(id)) {
 					const playlist = await player.get('playlist');
@@ -49,7 +48,7 @@ async function startPlayer() {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
 						stopped = -1;
-						return true;
+						return await rpc.invoke('library:uri', playlist[index].filename);
 					}
 				} else if (stopped > 0) {
 					const playlist = await player.get('playlist');
@@ -58,13 +57,14 @@ async function startPlayer() {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
 						stopped = -1;
-						return true;
+						return await rpc.invoke('library:uri', playlist[index].filename);
 					}
 				} else if (stopped === 0) {
 					await player.command('playlist-play-index', 0);
 					await player.set('pause', false);
 					stopped = -1;
-					return true;
+					const playlist = await player.get('playlist');
+					return await rpc.invoke('library:uri', playlist[0].filename);
 				} else {
 					const play = !await player.get('pause');
 					await player.set('pause', play);
@@ -78,7 +78,7 @@ async function startPlayer() {
 
 		rpc.handle('player:play', async (event, id) => {
 			try {
-				if (typeof id === "number") id = id.toString()
+				if (typeof id === "number") id = id.toString();
 				const ids = Object.values(idIndex);
 				if (ids.includes(id)) {
 					const playlist = await player.get('playlist');
@@ -87,7 +87,7 @@ async function startPlayer() {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
 						stopped = -1;
-						return playlist[index].filename;
+						return await rpc.invoke('library:uri', playlist[index].filename);
 					}
 				} else if (stopped > 0) {
 					const playlist = await player.get('playlist');
@@ -96,6 +96,7 @@ async function startPlayer() {
 						await player.command('playlist-play-index', index);
 						await player.set('pause', false);
 						stopped = -1;
+						return await rpc.invoke('library:uri', playlist[index].filename);
 					}
 				} else if (stopped === 0) {
 					await player.command('playlist-play-index', 0);
@@ -120,15 +121,20 @@ async function startPlayer() {
 		rpc.handle('player:stop', async (event, unsafe) => {
 			try {
 				const pos = await player.get('playlist-pos');
+				console.log(pos)
 				if (pos !== -1) {
 					const playlist = await player.get('playlist');
 					stopped = idIndex[playlist[pos].id];
 					await player.set('pause', true);
 					await player.command('stop', 'keep-playlist');
+					await rpc.invoke('plugins:state-changed', null);
+					playing = null;
 				} else if (unsafe) {
 					stopped = 0;
 					await player.set('pause', true);
 					await player.command('stop', 'keep-playlist');
+					await rpc.invoke('plugins:state-changed', null);
+					playing = null;
 				}
 			} catch (e) {
 				console.error(`player:stop exception: ${e}`);
@@ -164,18 +170,15 @@ async function startPlayer() {
 		rpc.handle('player:prev', async () => {
 			try {
 				if (stopped === -1) {
-					let time = 0;
-					try {
-						time = await player.get('time-pos');
-					} catch {}
+					let time = await rpc.invoke('player:get-time');
 					const pos = await player.get('playlist-pos');
 					if (time > 5) {
-						await player.command('playlist-play-index', pos);
+						await rpc.invoke('player:set-time', 0);
 						await rpc.invoke('player:play');
 					} else {
 						if (pos === 0) {
 							if (looping === false) {
-								await player.command('playlist-play-index', pos);
+								await rpc.invoke('player:set-time', 0);
 							} else {
 								await player.command('playlist-play-index', await player.get('playlist-count') - 1);
 							}
@@ -271,8 +274,9 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:get-time', () => {
+		rpc.handle('player:get-time', async () => {
 			try {
+				const position = Math.max(await player.get('time-pos'), 0);
 				return position;
 			} catch (e) {
 				console.error(`player:get-time exception: ${e}`);
@@ -390,13 +394,9 @@ async function startPlayer() {
 		});
 
 		// other
-		player.observe('idle-active', async idle => {
-			if (idle) rpc.invoke('plugins:state-changed', null);
-			if (idle) playing = null;
-		});
 		player.observe('pause', paused => {
-			rpc.invoke('plugins:state-changed', !paused);
 			playing = !paused;
+			rpc.invoke('plugins:state-changed', playing);
 		});
 
 		player.observe('playlist-pos', async pos => {
@@ -407,7 +407,7 @@ async function startPlayer() {
 
 			let id = 0;
 			if (pos === -1) {
-				await rpc.invoke('player:stop', true);
+				if (stopped === -1) await rpc.invoke('player:stop', true);
 			} else {
 				const playlist = await player.get('playlist');
 				const current = playlist[pos];
@@ -436,7 +436,7 @@ async function startPlayer() {
 		});
 
 		player.observe('time-pos', time => {
-			position = Math.max(time, 0);
+			const position = Math.max(time, 0);
 			rpc.invoke('metadata:position-changed', position);
 			rpc.invoke('plugins:position-changed', position);
 		});
@@ -456,7 +456,7 @@ async function startPlayer() {
 		});
 
 		player.on('seek', async () => {
-			rpc.invoke('plugins:seeked', await player.get('time-pos'));
+			rpc.invoke('plugins:seeked', await rpc.invoke('player:get-time'));
 		});
 
 		// default stuff

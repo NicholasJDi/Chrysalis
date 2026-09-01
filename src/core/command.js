@@ -195,8 +195,12 @@ async function executeCommand(data) {
 						return `Set volume to ${await rpc.invoke('player:set-volume', Number(request.args[0]))}%`;
 
 			case "play":
-				rpc.invoke('player:play', request.args[0]);
-				return "Playing the current song";
+				const file = await rpc.invoke('player:play', request.args[0]);
+				if (!file) {
+					return "Playing the current song";
+				} else {
+					return `Playing '${file}'`;
+				}
 
 			case "pause":
 				rpc.invoke('player:pause');
@@ -204,7 +208,15 @@ async function executeCommand(data) {
 
 			case "playPause":
 				const playing = await rpc.invoke('player:play-pause', request.args[0]);
-				return `${playing ? "Playing" : "Pausing"} the current song`;
+				if (!playing) {
+					return "Pausing the current song";
+				} else {
+					if (typeof playing === "string") {
+						return `Playing '${playing}'`;
+					} else {
+						return "Playing the current song";
+					}
+				}
 
 			case "stop":
 				rpc.invoke('player:stop');

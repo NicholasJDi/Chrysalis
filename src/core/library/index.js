@@ -1,16 +1,17 @@
 const rpc = require("../rpc");
 const fs = require("fs/promises");
 const Path = require("path");
+const os = require("os");
 
 const AUDIO_FORMATS = ['.mp3','.ogg','.wav','.flac','.m4a','.opus'];
 const IMAGE_FORMATS = ['.png','.jpeg','.jpg','.webp','.svg'];
 
-const CHRYSALIS_DIRECTORY = '/home/nicholasjdi/chrysalis';
-const METADATA_DIRECTORY = '/home/nicholasjdi/chrysalis/metadata';
+const CHRYSALIS_DIRECTORY = expandPath('~/chrysalis');
+const METADATA_DIRECTORY = expandPath('~/chrysalis/metadata');
 
 // the base index of libraryId -> metadataPath
 let index = { "default":1 };
-// the libraryId order to be given to ui and the playlist (if ids are in the index but not here they will not be shown in ui)
+// the libraryId order to be given to ui and the playlist (if ids are in the index but not here they will not be shown in ui or be in the playlist)
 let order = [];
 // the index of libraryId -> songPath
 let files = {};
@@ -173,6 +174,12 @@ function uriCompare(uri1, uri2) {
 		console.warn(`library:uri-compare exception: ${e}`)
 		return false;
 	}
+}
+
+function expandPath(path) {
+	return path.startsWith("~/")
+		? Path.join(os.homedir(), path.slice(2))
+		: path;
 }
 
 function changeExtension(filePath, newExt) {
