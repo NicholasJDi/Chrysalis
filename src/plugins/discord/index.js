@@ -1,8 +1,8 @@
 const discord = require("discord-rpc");
-let API
+let API;
 
 function _init(api) {
-	API = api
+	API = api;
 }
 
 function _playerMetadataChanged(metadata) {

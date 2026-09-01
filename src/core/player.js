@@ -455,8 +455,8 @@ async function startPlayer() {
 			rpc.invoke('metadata:duration-changed', id, duration);
 		});
 
-		player.on('seek', () => {
-			rpc.invoke('plugins:seeked', position);
+		player.on('seek', async () => {
+			rpc.invoke('plugins:seeked', await player.get('time-pos'));
 		});
 
 		// default stuff

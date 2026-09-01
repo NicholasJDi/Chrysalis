@@ -66,8 +66,8 @@ rpc.handle('metadata:set', (event, id, value, property = "") => {
 	} else {
 		metadata[id] = value;
 	}
-	if (currentId === id) rpc.invoke('metadata:update')
 
+	if (currentId === id) rpc.invoke('metadata:update');
 	rpc.invoke('metadata:save', id, rpc.invoke('library:get', id));
 });
 
@@ -93,9 +93,7 @@ rpc.handle('metadata:update', (event, id = currentId) => {
 				processed.subId = currentMix;
 				current.mix["_processed"] = currentMix;
 				const mix = processed.mix[currentMix.toString()];
-				for (const key of Object.keys(mix)) {
-					processed[key] = mix[key];
-				}
+				processed = rpc.invoke('metadata:merge', processed, mix, 'mix');
 			}
 
 			try {
@@ -147,8 +145,27 @@ rpc.handle('metadata:duration-changed', async (event, id, duration) => {
 	if (id === currentId && duration && !await rpc.invoke('metadata:get', id, "length")) rpc.invoke('metadata:set', id, duration, "length");
 });
 
-rpc.handle('metadata:flatten', (event, dict, history = "", section = "crsim:") => {
-	if (!dict) return {};
+// merge a 'dict' into a 'base' dict while respecting ignored tags (makes a new dict) if 'key' is provided removes it from the merged dict
+rpc.handle('metadata:merge', (event, base, dict, key = null) => {
+	const to = structuredClone(dict)
+	const out = structuredClone(base)
+	for (const key of Object.keys(to)) {
+		out[key] = to[key];
+	}
+	if (Array.isArray(out["_ignore"])) {
+		for (const key of out["_ignore"]) {
+			delete out[key];
+		}
+	}
+	if (typeof key === "string") {
+		delete out[key];
+	}
+	return out;
+});
+
+// flatten the crsim dict into externally valid crsim keys, if 'process' is false ignores non static data
+rpc.handle('metadata:flatten', (event, dict, process = true, history = "", section = "crsim:") => {
+	if (typeof dict !== "object" || Array.isArray(dict)) return {};
 	if (dict["_internal"]) return {};
 
 	let out = {};
@@ -156,15 +173,15 @@ rpc.handle('metadata:flatten', (event, dict, history = "", section = "crsim:") =
 		const array = Array.isArray(dict[key])
 		const value = array ? JSON.stringify(dict[key]) : dict[key].toString();
 
-		if (key === "_processed") {
+		if (process && key === "_processed") {
 			if (typeof dict[key] === "object" && !array) {
-				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], history, `${section.startsWith(".") ? "._" + section.slice(1) : "_" + section}`) };
+				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history, `${section.startsWith(".") ? "._" + section.slice(1) : "_" + section}`) };
 			} else if (!section.startsWith("_") && !section.startsWith("._")) {
 				out[history + `${section.startsWith(".") ? "._" + section.slice(0) : "_" + section}`] = value;
 			}
 		} else {
 			if (typeof dict[key] === "object" && !array) {
-				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], history + section, (section).endsWith(":") ? `${key}` : `.${key}`) };
+				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history + section, (section).endsWith(":") ? `${key}` : `.${key}`) };
 			} else if (key === "_default") {
 				out[history + section] = value;
 			} else if (!key.startsWith("_")) {

@@ -1,6 +1,6 @@
 const mpris = require("mpris-service");
 
-let API
+let API;
 
 let position = 0;
 
@@ -26,7 +26,7 @@ player.getPosition = () => {
 };
 
 function _init(api) {
-	API = api
+	API = api;
 	API.handle("reset", () => {
 		player.metadata = {};
 		player.playbackStatus = mpris.PLAYBACK_STATUS_STOPPED;
