@@ -1,7 +1,9 @@
 const mpris = require("mpris-service");
+const { setTimeout } = require("timers/promises")
 
 let API;
 
+let loading = false;
 let position = 0;
 
 const player = mpris({
@@ -33,7 +35,23 @@ function _init(api) {
 	});
 }
 
-async function _playerMetadataChanged(metadata, processed) {
+function _trackChanged(id) {
+	loading = true;
+	position = 0;
+	forceZero();
+}
+
+async function forceZero() {
+	while (loading) {
+		if (position !== 0) return;
+		if (player.playbackStatus === mpris.PLAYBACK_STATUS_PLAYING) {
+			player.seeked(0);
+		}
+		await setTimeout(900);
+	}
+}
+
+async function _metadataChanged(metadata, processed) {
 	const data = {};
 	// mpris (Media Player Remote Interfacing Specification)
 	if (processed?.id) data['mpris:trackid'] = player.objectPath(`track/${processed.id}`);
@@ -55,27 +73,29 @@ async function _playerMetadataChanged(metadata, processed) {
 	player.metadata = { ...data, ...crsim };
 }
 
-function _playerLoopChanged(looping) {
+function _loopChanged(looping) {
 	player.loopStatus =  looping ? mpris.LOOP_STATUS_PLAYLIST : looping === false ? mpris.LOOP_STATUS_NONE : mpris.LOOP_STATUS_TRACK;
 }
 
-function _playerShuffleChanged(shuffle) {
+function _shuffleChanged(shuffle) {
 	player.shuffle =  shuffle;
 }
 
-function _playerStateChanged(playing) {
+function _stateChanged(playing) {
 	player.playbackStatus =  playing ? mpris.PLAYBACK_STATUS_PLAYING : playing === false ? mpris.PLAYBACK_STATUS_PAUSED : mpris.PLAYBACK_STATUS_STOPPED;
 }
 
-function _playerPositionChanged(time) {
+function _positionChanged(time) {
 	position = time;
 }
 
-function _playerSeeked(time) {
-	player.seeked(time * 1_000_000);
+function _seeked(time) {
+	loading = false;
+	position = time;
+	player.seeked(position * 1_000_000);
 }
 
-function _playerVolumeChanged(volume) {
+function _volumeChanged(volume) {
 	player.volume = volume / 100;
 }
 
@@ -141,11 +161,12 @@ player.on('quit', () => {
 
 module.exports = {
 	_init,
-	_playerMetadataChanged,
-	_playerLoopChanged,
-	_playerShuffleChanged,
-	_playerStateChanged,
-	_playerPositionChanged,
-	_playerSeeked,
-	_playerVolumeChanged
+	_trackChanged,
+	_metadataChanged,
+	_loopChanged,
+	_shuffleChanged,
+	_stateChanged,
+	_positionChanged,
+	_seeked,
+	_volumeChanged
 };

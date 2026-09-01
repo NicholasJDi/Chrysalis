@@ -276,17 +276,18 @@ async function startPlayer() {
 
 		rpc.handle('player:get-time', async () => {
 			try {
-				const position = Math.max(await player.get('time-pos'), 0);
+				const time = await player.get('time-pos');
+				const position = Math.max(isNaN(time) ? 0 : time, 0);
 				return position;
 			} catch (e) {
-				console.error(`player:get-time exception: ${e}`);
+				return 0;
 			}
 		});
 
 		rpc.handle('player:set-time', async (event, time) => {
 			try {
 				await player.command('seek', time, "absolute+exact");
-				return await player.get('time-pos');
+				return await rpc.invoke('player:get-time');
 			} catch (e) {
 				console.error(`player:set-time exception: ${e}`);
 			}
@@ -295,7 +296,7 @@ async function startPlayer() {
 		rpc.handle('player:shift-time', async (event, offset) => {
 			try {
 				await player.command('seek', offset, "relative+exact");
-				return await player.get('time-pos');
+				return await rpc.invoke('player:get-time');
 			} catch (e) {
 				console.error(`player:shift-time exception: ${e}`);
 			}
@@ -413,7 +414,9 @@ async function startPlayer() {
 				const current = playlist[pos];
 				id = idIndex[current.id];
 			}
+
 			await rpc.invoke('library:track-changed', id);
+			await rpc.invoke('plugins:track-changed', id);
 		});
 
 		player.observe('loop-playlist', loop => {
@@ -435,8 +438,8 @@ async function startPlayer() {
 			}
 		});
 
-		player.observe('time-pos', time => {
-			const position = Math.max(time, 0);
+		player.observe('time-pos', async () => {
+			const position = await rpc.invoke('player:get-time');
 			rpc.invoke('metadata:position-changed', position);
 			rpc.invoke('plugins:position-changed', position);
 		});
@@ -447,7 +450,7 @@ async function startPlayer() {
 
 		player.observe('duration', async duration => {
 			if (stopped !== -1) return;
-			const pos = await player.get('playlist-pos'); 
+			const pos = await player.get('playlist-pos');
 			const playlist = await player.get('playlist');
 			const current = playlist[pos];
 			if (!current) return;
@@ -456,6 +459,10 @@ async function startPlayer() {
 		});
 
 		player.on('seek', async () => {
+			rpc.invoke('plugins:seeked', await rpc.invoke('player:get-time'));
+		});
+
+		player.on('file-loaded', async () => {
 			rpc.invoke('plugins:seeked', await rpc.invoke('player:get-time'));
 		});
 

@@ -201,32 +201,36 @@ function subscribe(id, call, ...args) {
 	}
 }
 
+rpc.handle('plugins:track-changed', (event, id) => {
+	subscribe('track-changed', "trackChanged", id);
+})
+
 rpc.handle('plugins:metadata-changed', (event, metadata, processed) => {
-	subscribe('metadata-changed', "playerMetadataChanged", metadata, processed);
+	subscribe('metadata-changed', "metadataChanged", metadata, processed);
 });
 
 rpc.handle('plugins:loop-changed', (event, looping) => {
-	subscribe('loop-changed', "playerLoopChanged", looping);
+	subscribe('loop-changed', "loopChanged", looping);
 });
 
 rpc.handle('plugins:shuffle-changed', (event, shuffle) => {
-	subscribe('shuffle-changed', "playerShuffleChanged", shuffle);
+	subscribe('shuffle-changed', "shuffleChanged", shuffle);
 });
 
 rpc.handle('plugins:state-changed', (event, playing) => {
-	subscribe('state-changed', "playerStateChanged", playing);
+	subscribe('state-changed', "stateChanged", playing);
 });
 
 rpc.handle('plugins:position-changed', (event, time) => {
-	subscribe('position-changed', "playerPositionChanged", time);
+	subscribe('position-changed', "positionChanged", time);
 });
 
 rpc.handle('plugins:seeked', (event, time) => {
-	subscribe('seeked', "playerSeeked", time);
+	subscribe('seeked', "seeked", time);
 });
 
 rpc.handle('plugins:volume-changed', (event, time) => {
-	subscribe('volume-changed', "playerVolumeChanged", time);
+	subscribe('volume-changed', "volumeChanged", time);
 });
 
 module.exports = {

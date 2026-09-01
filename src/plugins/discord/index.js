@@ -5,16 +5,16 @@ function _init(api) {
 	API = api;
 }
 
-function _playerMetadataChanged(metadata) {
+function _metadataChanged(metadata) {
 
 }
 
-function _playerStateChanged(playing) {
+function _stateChanged(playing) {
 
 }
 
 module.exports = {
 	_init,
-	_playerMetadataChanged,
-	_playerStateChanged
+	_metadataChanged,
+	_stateChanged
 };

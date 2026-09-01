@@ -24,6 +24,7 @@
 			"app:quit"
 		],
 		"subscribe": [
+			"track-changed",
 			"metadata-changed",
 			"loop-changed",
 			"shuffle-changed",
