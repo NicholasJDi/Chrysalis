@@ -43,8 +43,9 @@ function _trackChanged(id) {
 
 async function forceZero() {
 	while (loading) {
-		if (position !== 0) return;
-		if (player.playbackStatus === mpris.PLAYBACK_STATUS_PLAYING) {
+		if (position !== 0 || player.playbackStatus === mpris.PLAYBACK_STATUS_STOPPED)
+			return;
+		if (player.playbackStatus !== mpris.PLAYBACK_STATUS_PAUSED) {
 			player.seeked(0);
 		}
 		await setTimeout(900);

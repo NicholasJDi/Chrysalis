@@ -174,18 +174,18 @@ async function startPlayer() {
 					const pos = await player.get('playlist-pos');
 					if (time > 5) {
 						await rpc.invoke('player:set-time', 0);
-						await rpc.invoke('player:play');
 					} else {
 						if (pos === 0) {
 							if (looping === false) {
 								await rpc.invoke('player:set-time', 0);
 							} else {
 								await player.command('playlist-play-index', await player.get('playlist-count') - 1);
+								await rpc.invoke('player:play');
 							}
 						} else {
 							await player.command('playlist-play-index', pos - 1);
+							await rpc.invoke('player:play');
 						}
-						await rpc.invoke('player:play');
 					}
 				} else {
 					const count = await player.get('playlist-count') - 1;
