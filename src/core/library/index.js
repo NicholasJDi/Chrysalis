@@ -15,6 +15,8 @@ let index = { "default":1 };
 let order = [];
 // the index of libraryId -> songPath
 let files = {};
+// the currently playing libraryId
+let current = 0;
 
 function init() {
 	rpc.invoke('library:load');
@@ -98,12 +100,14 @@ rpc.handle('library:close', async (event, uri) => {
 });
 
 rpc.handle('library:track-changed', async (event, id, length) => {
-	if (length && rpc.invoke('metadata:get', id, "length") !== length) rpc.invoke('metadata:set', id, length, "length");
+	current = id;
+	if (length && rpc.invoke('metadata:get', id, "length") !== length) await rpc.invoke('metadata:set', id, length, "length");
 	rpc.invoke('metadata:update', id);
 });
 
 rpc.handle('library:get', (event, id) => {
-	return index?.[id];
+	if (id) return index[id.toString()];
+	return current;
 });
 
 rpc.handle("library:scan", async (event, directory, type, recursive) => {

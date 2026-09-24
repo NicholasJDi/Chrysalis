@@ -18,10 +18,11 @@ function prepareServer() {
 		socket.on("data", async data => {
 			const response = await executeCommand(data.toString());
 
-			if (socket.writable) {
-				socket.write(response);
-			}
-			socket.end();
+			try {
+				if (socket.readyState === "open" && !socket.destroyed && socket.writable) {
+					socket.write(response, () => socket.end());
+				}
+			} catch {}
 		});
 	});
 

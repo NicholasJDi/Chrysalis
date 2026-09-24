@@ -43,7 +43,7 @@ function _trackChanged(id) {
 
 async function forceZero() {
 	while (loading) {
-		if (position !== 0 || player.playbackStatus === mpris.PLAYBACK_STATUS_STOPPED)
+		if (position > 0 || player.playbackStatus === mpris.PLAYBACK_STATUS_STOPPED)
 			return;
 		if (player.playbackStatus !== mpris.PLAYBACK_STATUS_PAUSED) {
 			player.seeked(0);
@@ -57,7 +57,7 @@ async function _metadataChanged(metadata, processed) {
 	// mpris (Media Player Remote Interfacing Specification)
 	if (processed?.id) data['mpris:trackid'] = player.objectPath(`track/${processed.id}`);
 	if (metadata?.length) data['mpris:length'] = metadata.length * 1_000_000;
-	if (processed?.art?.["_default"]) data['mpris:artUrl'] = processed.art["_default"];
+	if (processed?.art?.["_processed"]) data['mpris:artUrl'] = processed.art["_processed"];
 	// xesam (eXtEnsible Search And Metadata)
 	if (metadata?.path) data['xesam:url'] = metadata.path;
 	if (processed?.title) data['xesam:title'] = processed.title;
@@ -67,6 +67,7 @@ async function _metadataChanged(metadata, processed) {
 	if (processed?.art?.artists) data['xesam:albumArtist'] = processed.art.artists;
 	if (processed?.disc) data['xesam:discNumber'] = processed.disc.toString()
 	if (processed?.track) data['xesam:trackNumber'] = processed.track.toString()
+	if (processed?.lyric) data['xesam:asText'] = processed.lyric.toString()
 	if (processed?.bpm) data['xesam:audioBPM'] = processed.bpm.toString()
 	// crsim (Customizable, Rich, Supplemental Information Metadata / ChRySalIs Metadata)
 	const crsim = await API.invoke("metadata:flatten", metadata);
