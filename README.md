@@ -27,7 +27,7 @@ Because this is an alpha project i don't feel the need to compile it yet, so if 
 - Place the `mpv` program file in `src/resources/bin` and rename it to `Chrysalis` (or `Chrysalis.exe` for windows, you may also need to place dll's alongside it idk i don't own a windows machine)
 
 ### Usage
-Chrysalis is currently a fully command line music player with no state saving, if you restart it anything you were doing will be lost.<br>
+Chrysalis is currently a fully command line music player.<br>
 (this assumes you are running these commands from the vscode terminal)
 
 
@@ -46,7 +46,7 @@ npm start help
 ```
 
 
-To play a song Run
+To add a song to the Playlist (or play if it's already in the Playlist) Run
 
 ```
 npm start open '<filepath>'
@@ -54,19 +54,13 @@ npm start open '<filepath>'
 `<filepath>` has to be a full file path (starting with `/`) (you can also do Web Url's but its not recommended because mpv behaves kinda weirdly with them.)
 
 ```
-npm start open https://soundcloud.com/sytricka/c418-stranger-things-remix-and-aria-math-mashup\
+npm start open https://soundcloud.com/sytricka/c418-stranger-things-remix-and-aria-math-mashup/
 ```
 
-
-To add a song to the Playlist without playing it immediately Run
-
-```
-npm start add <filepath>
-```
 to remove a song from the Playlist run
 
 ```
-npm start remove <filepath>
+npm start close <filepath>
 ```
 
 
@@ -96,10 +90,10 @@ Skip to the next song in the Playlist with
 ```
 npm start next
 ```
- and to the previous song with
- 
- ```
- npm start prev
+and to the previous song with
+
+```
+npm start prev
 ```
 
 
@@ -113,7 +107,7 @@ npm start quit
 Go to a specific time or seek with
 
 ```
-npm start position <time>[+/-]
+npm start position <time> [+/-]
 ```
 (include `+` or `-` to seek by `<time>` forwards or backwards respectively)
 
