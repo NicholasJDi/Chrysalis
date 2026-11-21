@@ -1,6 +1,9 @@
 # Chrysalis
 A Cross Platform Music Player with the main selling point of data organization, and extremely dynamic metadata and settings (I'll do my best to make ok windows and mac integration, but this is built *on* linux *for* linux)
 
+> [!IMPORTANT]
+> This is a Passion Project and it is in a Very VERY early state, i would honestly not recommend even attempting to use this in any way.
+
 ## Testing it yourself
 Because this is an alpha project i don't feel the need to compile it yet, so if you want to try it out yourself you have to do a few things.
 ### Setup
@@ -131,18 +134,10 @@ or unshuffle with
 npm start shuffle Off
 ```
 
-# Customizable, Rich, Supplemental Information Metadata (CRSIM)
-I decided that `mpris:` and `xesam:` was not enough metadata for me, so I've come up with `crsim:`. (an alternate name for `crsim` is ChRisalIs Metadata)
+Metadata must be defined manually and are stored as .crsim (JSON) files at ~/chrysalis/metadata
 
-`crsim` is a Separate Ontology for Supplemental Information Metadata that programs can read from alongside `xesam` and `mpris`, `crsim` is Customizable in the way that anyone can add tags to it as long as they follow some rules.
+## Metadata
+Chrysalis uses MPRIS with the [CRSim](https://github.com/NicholasJDi/CRSIM) ontology to expose and store metadata, because [CRSim](https://github.com/NicholasJDi/CRSIM) handles a LOT more than xesam or other, Chrysalis is (as far as i know) the first music player to have ridiculously extensive metadata.
 
-`crsim` is Object based, this means that it is much more rich than `xesam`.
-`crsim` itself is a Object, you can view an Example JSON [here](https://github.com/NicholasJDi/Chrysalis/blob/main/CRSIM_Example.json).
-
-`crsim` flattens Objects into Namespace Strings, (`crsim:title` `crsim:art.album` `crsim:art.override`)<br>
-flattens Arrays into JSON Strings, (`crsim:artists = '["artist1","artist2"]'`)<br>
-and converts all other Values into Strings. (excluding the Values in Arrays)
-
-All keys beginning with `_` are reserved by `crsim` for internal usage, no program is allowed to make `crsim` keys that start with `_`.
-
-Tags not in the base `crsim` Standard must be within a Namespace (Object), like `crsim:game.*`. (which would give information on game ost's)
+## The Future
+For now i will continue to develop Chrysalis with electron, but at some point i would kind of like to recode it in rust (simply because i think it would be funny)
