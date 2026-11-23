@@ -1,5 +1,5 @@
 # Chrysalis
-A Cross Platform Music Player with the main selling point of data organization, and extremely dynamic metadata and settings (I'll do my best to make ok windows and mac integration, but this is built *on* linux *for* linux)
+A Music Player with the main selling point of data organization, and extremely dynamic metadata and settings, for now this is a Linux only project (i chose electron for the single purpose of cross platform compatibility, at some point i will do so but for being in such early stages of development i would like to work on only what i can test.)
 
 > [!IMPORTANT]
 > This is a Passion Project and it is in a Very VERY early state, i would honestly not recommend even attempting to use this in any way.
@@ -27,7 +27,7 @@ Because this is an alpha project i don't feel the need to compile it yet, so if 
   sudo apt install mpv
   ```
   and copy the file from `/usr/bin/mpv`, it may be similar for other linux distros)
-- Place the `mpv` program file in `src/resources/bin` and rename it to `Chrysalis` (or `Chrysalis.exe` for windows, you may also need to place dll's alongside it idk i don't own a windows machine)
+- Place the `mpv` program file in `src/resources/bin` and rename it to `Chrysalis`
 
 ### Usage
 Chrysalis is currently a fully command line music player.<br>
@@ -140,4 +140,5 @@ Metadata must be defined manually and are stored as .crsim (JSON) files at ~/chr
 Chrysalis uses MPRIS with the [CRSim](https://github.com/NicholasJDi/CRSIM) ontology to expose and store metadata, because [CRSim](https://github.com/NicholasJDi/CRSIM) handles a LOT more than xesam or other, Chrysalis is (as far as i know) the first music player to have ridiculously extensive metadata.
 
 ## The Future
-For now i will continue to develop Chrysalis with electron, but at some point i would kind of like to recode it in rust (simply because i think it would be funny)
+- For now i will continue to develop Chrysalis with electron, but at some point i would kind of like to recode it in rust (simply because i think it would be funny)
+- I will make Chrysalis Cross Platform at some point
