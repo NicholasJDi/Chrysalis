@@ -1,6 +1,6 @@
 {
 	"name": "chrysalis",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Music player",
 	"main": "src/main.js",
 	"scripts": {
@@ -41,32 +41,8 @@
 					"to": "src/resources/bin"
 				},
 				{
-					"from": "src/plugins/linux",
-					"to": "src/plugins"
-				}
-			]
-		},
-		"win": {
-			"extraResources": [
-				{
-					"from": "src/resources/bin/windows",
-					"to": "src/resources/bin"
-				},
-				{
-					"from": "src/plugins/windows",
-					"to": "src/plugins"
-				}
-			]
-		},
-		"mac": {
-			"extraResources": [
-				{
-					"from": "src/resources/bin/mac",
-					"to": "src/resources/bin"
-				},
-				{
-					"from": "src/plugins/mac",
-					"to": "src/plugins"
+					"from": "src/modules/linux",
+					"to": "src/modules"
 				}
 			]
 		}

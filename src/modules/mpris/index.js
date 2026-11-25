@@ -7,8 +7,8 @@ let loading = false;
 let position = 0;
 
 const player = mpris({
-	name: "chrysalis",
-	identity: "Chrysalis",
+	name: 'chrysalis',
+	identity: 'Chrysalis',
 	volume: 0.5,
 	shuffle: false,
 	playbackStatus: mpris.PLAYBACK_STATUS_STOPPED,
@@ -43,7 +43,7 @@ function _trackChanged(id) {
 
 async function forceZero() {
 	while (loading) {
-		if (position !== 0 || player.playbackStatus === mpris.PLAYBACK_STATUS_STOPPED)
+		if (position > 0 || player.playbackStatus === mpris.PLAYBACK_STATUS_STOPPED)
 			return;
 		if (player.playbackStatus !== mpris.PLAYBACK_STATUS_PAUSED) {
 			player.seeked(0);
@@ -57,7 +57,7 @@ async function _metadataChanged(metadata, processed) {
 	// mpris (Media Player Remote Interfacing Specification)
 	if (processed?.id) data['mpris:trackid'] = player.objectPath(`track/${processed.id}`);
 	if (metadata?.length) data['mpris:length'] = metadata.length * 1_000_000;
-	if (processed?.art?.["_default"]) data['mpris:artUrl'] = processed.art["_default"];
+	if (processed?.art?.["_processed"]) data['mpris:artUrl'] = processed.art['_processed'];
 	// xesam (eXtEnsible Search And Metadata)
 	if (metadata?.path) data['xesam:url'] = metadata.path;
 	if (processed?.title) data['xesam:title'] = processed.title;
@@ -67,9 +67,10 @@ async function _metadataChanged(metadata, processed) {
 	if (processed?.art?.artists) data['xesam:albumArtist'] = processed.art.artists;
 	if (processed?.disc) data['xesam:discNumber'] = processed.disc.toString()
 	if (processed?.track) data['xesam:trackNumber'] = processed.track.toString()
+	if (processed?.lyric) data['xesam:asText'] = processed.lyric.toString()
 	if (processed?.bpm) data['xesam:audioBPM'] = processed.bpm.toString()
 	// crsim (Customizable, Rich, Supplemental Information Metadata / ChRySalIs Metadata)
-	const crsim = await API.invoke("metadata:flatten", metadata);
+	const crsim = await API.invoke('metadata:flatten', metadata);
 
 	player.metadata = { ...data, ...crsim };
 }
@@ -100,63 +101,63 @@ function _volumeChanged(volume) {
 	player.volume = volume / 100;
 }
 
-player.on('playpause', async () => {
-	if (API) API.invoke("player:play-pause");
+player.on("playpause", () => {
+	if (API) API.invoke('player:play-pause');
 });
 
-player.on('play', async () => {
-	if (API) API.invoke("player:play");
+player.on("play", () => {
+	if (API) API.invoke('player:play');
 });
 
-player.on('pause', async () => {
-	if (API) API.invoke("player:pause");
+player.on("pause", () => {
+	if (API) API.invoke('player:pause');
 });
 
-player.on('stop',() => {
-	if (API) API.invoke("player:stop");
+player.on("stop", () => {
+	if (API) API.invoke('player:stop');
 });
 
-player.on('position', (event) => {
-	if (API && event.trackId === player.metadata['mpris:trackid']) API.invoke("player:set-time", event.position / 1_000_000);
+player.on("position", (event) => {
+	if (API && event.trackId === player.metadata['mpris:trackid']) API.invoke('player:time.set', event.position / 1_000_000);
 });
 
-player.on('seek', (time) => {
-	if (API) API.invoke("player:shift-time", time / 1_000_000);
+player.on("seek", (time) => {
+	if (API) API.invoke('player:time.shift', time / 1_000_000);
 });
 
-player.on('volume', (volume) => {
-	if (API) API.invoke("player:set-volume", volume * 100);
+player.on("volume", (volume) => {
+	if (API) API.invoke('player:volume.set', volume * 100);
 });
 
-player.on('next',() => {
-	if (API) API.invoke("player:next");
+player.on("next", () => {
+	if (API) API.invoke('player:next');
 });
 
-player.on('previous',() => {
-	if (API) API.invoke("player:prev");
+player.on("previous", () => {
+	if (API) API.invoke('player:prev');
 });
 
-player.on('loopStatus', status => {
+player.on("loopStatus", status => {
 	if (API) {
-		if (status === "None") API.invoke("player:loop", false);
-		else if (status === "Track") API.invoke("player:loop", null);
-		else if (status === "Playlist") API.invoke("player:loop", true);
+		if (status === 'None') API.invoke('player:loop', false);
+		else if (status === 'Track') API.invoke('player:loop', null);
+		else if (status === 'Playlist') API.invoke('player:loop', true);
 	}
 });
 
-player.on('shuffle', shuffle => {
+player.on("shuffle", shuffle => {
 	if (API) API.invoke('player:shuffle', shuffle);
 });
 
-player.on('open', path => {
+player.on("open", path => {
 	if (API) API.invoke('library:open', path.uri);
 });
 
-player.on('raise', () => {
+player.on("raise", () => {
 	if (API) API.invoke("app:raise");
 });
 
-player.on('quit', () => {
+player.on("quit", () => {
 	if (API) API.invoke('app:quit');
 });
 

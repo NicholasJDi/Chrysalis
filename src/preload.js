@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 function Electron() {
 	contextBridge.exposeInMainWorld("Electron", {
-		getAccentColor: () => ipcRenderer.invoke("get-system-accent-color")
+		getAccentColor: () => ipcRenderer.invoke('electron:system.accent-color')
 	});
 }
 
@@ -11,9 +11,9 @@ function Chrysalis() {
 	contextBridge.exposeInMainWorld("Chrysalis", {
 		library: {
 			metadata: {
-				getMetadataFromFile: (path) => ipcRenderer.invoke("library:get-metadata", path)
+				getMetadataFromFile: (path) => ipcRenderer.invoke('library:get-metadata', path)
 			},
-			getFiles: (directory, type, recursive) => ipcRenderer.invoke("library:scan", directory, type, recursive)
+			getFiles: (directory, type, recursive) => ipcRenderer.invoke('library:scan', directory, type, recursive)
 		},
 		player: {
 

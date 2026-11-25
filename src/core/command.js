@@ -3,36 +3,31 @@ const fs = require("fs");
 const net = require("net");
 const { Command, InvalidArgumentError, Argument } = require("commander");
 const rpc = require("./rpc");
-const socketPath = process.platform === "win32"
-	? "\\\\.\\pipe\\chrysalis"
-	: "/tmp/chrysalis.sock";
+const socketPath = "/tmp/chrysalis.sock";
 
 function prepareServer() {
-	if (process.platform !== "win32") {
-		try {
-			fs.unlinkSync(socketPath);
-		} catch (err) {}
-	}
+	try {
+		fs.unlinkSync(socketPath);
+	} catch (err) {}
 
 	const server = net.createServer(socket => {
 		socket.on("data", async data => {
 			const response = await executeCommand(data.toString());
 
-			if (socket.writable) {
-				socket.write(response);
-			}
-			socket.end();
+			try {
+				if (socket.readyState === "open" && !socket.destroyed && socket.writable) {
+					socket.write(response, () => socket.end());
+				}
+			} catch {}
 		});
 	});
 
 	server.listen(socketPath);
 
 	app.on("will-quit", () => {
-		if (process.platform !== "win32") {
-			try {
-				fs.unlinkSync(socketPath);
-			} catch {}
-		}
+		try {
+			fs.unlinkSync(socketPath);
+		} catch {}
 	});
 }
 
@@ -53,7 +48,7 @@ function sendCommand(command) {
 	});
 
 	client.on("error", err => {
-		console.error("Failed to connect to running Chrysalis instance.");
+		console.error('Failed to connect to running Chrysalis instance.');
 		app.quit();
 	});
 }
@@ -181,18 +176,18 @@ async function executeCommand(data) {
 				return "";
 
 			case "quit":
-				app.quit();
+				rpc.invoke('app:quit');
 				return "Quitting Chrysalis";
 
 			case "volume":
 				if (!request.args.length)
-					return `Chrysalis is currently at ${await rpc.invoke('player:get-volume')}% volume`;
+					return `Chrysalis is currently at ${await rpc.invoke('player:volume.get')}% volume`;
 				else
 					if (request.args[1] === '+' || request.args[1] === '-') {
-						const volume = await rpc.invoke('player:get-volume');
-						return `Set volume to ${await rpc.invoke('player:shift-volume', request.args[1] === '-' ? -Number(request.args[0]) : Number(request.args[0]))}% from ${volume}%`;
+						const volume = await rpc.invoke('player:volume.get');
+						return `Set volume to ${await rpc.invoke('player:volume.shift', request.args[1] === '-' ? -Number(request.args[0]) : Number(request.args[0]))}% from ${volume}%`;
 					} else
-						return `Set volume to ${await rpc.invoke('player:set-volume', Number(request.args[0]))}%`;
+						return `Set volume to ${await rpc.invoke('player:volume.set', Number(request.args[0]))}%`;
 
 			case "play":
 				const file = await rpc.invoke('player:play', request.args[0]);
@@ -231,22 +226,22 @@ async function executeCommand(data) {
 				return 'Skipping to previous song';
 
 			case "status":
-				const status = await rpc.invoke('player:get-status');
+				const status = await rpc.invoke('player:status');
 				return `Chrysalis is ${status ? 'Playing' : status === false ? "Paused" : "Stopped"}`;
 
 			case "position":
 				if (!request.args.length)
-					return `Chrysalis is currently at ${await rpc.invoke('player:get-time')} seconds`;
+					return `Chrysalis is currently at ${await rpc.invoke('player:time.get')} seconds`;
 				else
 					if (request.args[1] === '+' || request.args[1] === '-') {
-						const time = await rpc.invoke('player:get-time');
-						return `Set Time to ${await rpc.invoke('player:shift-time', request.args[1] === '-' ? -Number(request.args[0]) : Number(request.args[0]))} seconds from ${time} seconds`;
+						const time = await rpc.invoke('player:time.get');
+						return `Set Time to ${await rpc.invoke('player:time.shift', request.args[1] === '-' ? -Number(request.args[0]) : Number(request.args[0]))} seconds from ${time} seconds`;
 					} else
-						return `Set time to ${await rpc.invoke('player:set-time', Number(request.args[0]))} seconds`;
+						return `Set time to ${await rpc.invoke('player:time.set', Number(request.args[0]))} seconds`;
 
 			case "loop":
 				if (!request.args[0]) {
-					const looping = await rpc.invoke('player:get-looping');
+					const looping = await rpc.invoke('player:looping');
 					return `Chrysalis is looping ${looping ? 'the Playlist' : looping === false ? "Nothing" : "the current Track"}`;
 				} else {
 					const looping = await rpc.invoke('player:loop', request.args[0] === "Playlist" ? true : request.args[0] === "Track" ? null : false);
@@ -255,9 +250,9 @@ async function executeCommand(data) {
 
 			case "shuffle":
 				if (!request.args[0])
-					return `The Playlist is ${await rpc.invoke('player:get-shuffled') ? "Shuffled" : "Unshuffled"}`;
+					return `The Playlist is ${await rpc.invoke('player:shuffled') ? "Shuffled" : "Unshuffled"}`;
 				else
-					return `${await rpc.invoke("player:shuffle", request.args[0] === "On" ? true : request.args === "Off" ? false : !await rpc.invoke("player:get-shuffled")) ? "Shuffling" : "Unshuffling"} the Playlist`;
+					return `${await rpc.invoke("player:shuffle", request.args[0] === "On" ? true : request.args === "Off" ? false : !await rpc.invoke("player:shuffled")) ? "Shuffling" : "Unshuffling"} the Playlist`;
 
 			case "open":
 				const result = await rpc.invoke('library:open', request.args[0]);

@@ -1,6 +1,11 @@
 const rpc = require("../rpc");
 
+function initialize() {
+	
+}
+
 module.exports = {
-	plugins: require("./plugins"),
-	metadata: require("./plugins")
+	metadata: require("./metadata"),
+	modules: require("./module"),
+	initialize
 };

@@ -10,28 +10,30 @@ const CHRYSALIS_DIRECTORY = expandPath('~/chrysalis');
 const METADATA_DIRECTORY = expandPath('~/chrysalis/metadata');
 
 // the base index of libraryId -> metadataPath
-let index = { "default":1 };
+let index = { 'default':1 };
 // the libraryId order to be given to ui and the playlist (if ids are in the index but not here they will not be shown in ui or be in the playlist)
 let order = [];
 // the index of libraryId -> songPath
 let files = {};
+// the currently playing libraryId
+let current = 0;
 
 function init() {
 	rpc.invoke('library:load');
 }
 
 // loads the index from index.json and fills files (requests metadata)
-rpc.handle('library:load', async () => {
+rpc.handle("library:load", async () => {
 	try {
 		index = JSON.parse(
 			await fs.readFile(
-				Path.join(CHRYSALIS_DIRECTORY, 'index.json'), "utf8"
+				Path.join(CHRYSALIS_DIRECTORY, 'index.json'), 'utf8'
 			)
 		);
 		const keys = Object.keys(index)
 		for (const id of keys) {
-			if (id === "default") continue;
-			files[id] = await rpc.invoke("metadata:load", id, index[id]);
+			if (id === 'default') continue;
+			files[id] = await rpc.invoke('metadata:load', id, index[id]);
 		}
 		if (!index.default) {
 			index.default = Number(keys[keys.length - 1]) + 1;
@@ -44,10 +46,10 @@ rpc.handle('library:load', async () => {
 });
 
 // saves the index to index.json
-rpc.handle('library:save', async () => {
+rpc.handle("library:save", async () => {
 	try {
 		const list = { ...index };
-		delete list["default"];
+		delete list['default'];
 		order = Object.keys(list);
 		await rpc.invoke('player:replace', order, order.map(id => files[id]));
 		await fs.mkdir(CHRYSALIS_DIRECTORY, { recursive: true });
@@ -61,7 +63,7 @@ rpc.handle('library:save', async () => {
 });
 
 // adds a file to the index or plays it if it is already in the index
-rpc.handle('library:open', async (event, uri) => {
+rpc.handle("library:open", async (event, uri) => {
 	try {
 		uri = await rpc.invoke('library:uri', uri);
 		const id = Object.values(files).findIndex(path => uriCompare(path, uri));
@@ -82,7 +84,7 @@ rpc.handle('library:open', async (event, uri) => {
 });
 
 // removes a file from the index
-rpc.handle('library:close', async (event, uri) => {
+rpc.handle("library:close", async (event, uri) => {
 	try {
 		uri = await rpc.invoke('library:uri', uri);
 		const list = Object.values(files);
@@ -97,57 +99,23 @@ rpc.handle('library:close', async (event, uri) => {
 	}
 });
 
-rpc.handle('library:track-changed', async (event, id, length) => {
-	if (length && rpc.invoke('metadata:get', id, "length") !== length) rpc.invoke('metadata:set', id, length, "length");
+rpc.handle("library:track-changed", async (event, id, length) => {
+	current = id;
+	if (length && rpc.invoke('metadata:get', id, 'length') !== length) await rpc.invoke('metadata:set', id, length, 'length');
 	rpc.invoke('metadata:update', id);
 });
 
-rpc.handle('library:get', (event, id) => {
-	return index?.[id];
+rpc.handle("library:get", (event, id) => {
+	if (id) return index[id.toString()];
+	return current;
 });
 
-rpc.handle("library:scan", async (event, directory, type, recursive) => {
-	let extensions = [];
-	switch (type) {
-		case "audio":
-			extensions = AUDIO_FORMATS;
-			break;
-		case "image":
-			extensions = IMAGE_FORMATS;
-			break;
-	}
-
-	const files = await scanDirectory(
-		directory,
-		extensions,
-		recursive || false);
-	return files;
-});
-
-async function scanDirectory(directory, extensions, recursive) {
-	try {
-		const entries = await fs.readdir(directory, {
-			recursive: recursive,
-			withFileTypes: true
-		});
-
-		return entries
-			.filter(entry =>
-				entry.isFile() &&
-				(extensions.includes(Path.extname(entry.name).toLowerCase()) || extensions.length === 0))
-			.map(entry => Path.join(entry.parentPath, entry.name));
-	} catch (e) {
-		console.warn(`Failed to scan ${directory}: ${e}`);
-		return [];
-	}
-}
-
-rpc.handle('library:uri', (event, uri) => uriForce(uri));
+rpc.handle("library:uri", (event, uri) => uriForce(uri));
 function uriForce(uri) {
 	const uri0 = uri;
 	try {
 		if (uri.startsWith('/')) uri = 'file://' + uri
-		while (uri.endsWith('/')) {
+		while (uri.endsWith("/")) {
 			uri = uri.slice(0, uri.length - 1);
 		}
 		if (new URL(uri)) return uri;
@@ -166,7 +134,7 @@ function uriForce(uri) {
 	}
 }
 
-rpc.handle('library:uri-compare', (event, uri1, uri2) => uriCompare(uri1, uri2));
+rpc.handle("library:uri-compare", (event, uri1, uri2) => uriCompare(uri1, uri2));
 function uriCompare(uri1, uri2) {
 	try {
 		return new URL(uri1).href === new URL(uri2).href;
@@ -176,6 +144,7 @@ function uriCompare(uri1, uri2) {
 	}
 }
 
+rpc.handle("library:expand-path", (event, path) => expandPath(path));
 function expandPath(path) {
 	return path.startsWith("~/")
 		? Path.join(os.homedir(), path.slice(2))

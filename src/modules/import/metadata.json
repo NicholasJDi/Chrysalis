@@ -1,9 +1,10 @@
 {
 	"uuid":"import@chrysalis",
 	"name":"Metadata Import",
-	"description": "Allows importing metadata from external sources like Rhythmbox or MusicBrainz",
+	"description": "Allows importing Metadata and Libraries from external sources like Rhythmbox or MusicBrainz",
 	"author": "NicholasJDi",
 	"version": "0.1.0",
+	"api":"0.1.0",
 	"permissions": {
 		"main": [
 			"metadata:set",
