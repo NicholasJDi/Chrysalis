@@ -3,9 +3,7 @@ const rpc = require("./rpc");
 const Mpv = require("mpv").default;
 
 // the mpv file (renamed to fix some issues with audio source display)
-const path = process.platform === "win32"
-	? "src/resources/bin/Chrysalis.exe"
-	: "src/resources/bin/Chrysalis";
+const path = 'src/resources/bin/Chrysalis';
 
 async function startPlayer() {
 	try {
@@ -18,7 +16,7 @@ async function startPlayer() {
 			path: path
 		});
 
-		app.on('will-quit', () =>{
+		app.on("will-quit", () =>{
 			player.end();
 		});
 
@@ -37,9 +35,9 @@ async function startPlayer() {
 		let reloading = false;
 
 		// built in methods
-		rpc.handle('player:play-pause', async (event, id) => {
+		rpc.handle("player:play-pause", async (event, id) => {
 			try {
-				if (typeof id === "number") id = id.toString();
+				if (typeof id === 'number') id = id.toString();
 				const ids = Object.values(idIndex);
 				if (playing !== true && ids.includes(id)) {
 					const playlist = await player.get('playlist');
@@ -76,9 +74,9 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:play', async (event, id) => {
+		rpc.handle("player:play", async (event, id) => {
 			try {
-				if (typeof id === "number") id = id.toString();
+				if (typeof id === 'number') id = id.toString();
 				const ids = Object.values(idIndex);
 				if (ids.includes(id)) {
 					const playlist = await player.get('playlist');
@@ -110,7 +108,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:pause', () => {
+		rpc.handle("player:pause", () => {
 			try {
 				player.set('pause', true);
 			} catch (e) {
@@ -118,22 +116,21 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:stop', async (event, unsafe) => {
+		rpc.handle("player:stop", async (event, unsafe) => {
 			try {
 				const pos = await player.get('playlist-pos');
-				console.log(pos)
 				if (pos !== -1) {
 					const playlist = await player.get('playlist');
 					stopped = idIndex[playlist[pos].id];
 					await player.set('pause', true);
 					await player.command('stop', 'keep-playlist');
-					await rpc.invoke('plugins:state-changed', null);
+					await rpc.invoke('modules:subscribe', 'state-changed', null);
 					playing = null;
 				} else if (unsafe) {
 					stopped = 0;
 					await player.set('pause', true);
 					await player.command('stop', 'keep-playlist');
-					await rpc.invoke('plugins:state-changed', null);
+					await rpc.invoke('modules:subscribe', 'state-changed', null);
 					playing = null;
 				}
 			} catch (e) {
@@ -141,7 +138,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:next', async () => {
+		rpc.handle("player:next", async () => {
 			try {
 				if (stopped === -1) {
 					const pos = await player.get('playlist-pos');
@@ -167,17 +164,17 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:prev', async () => {
+		rpc.handle("player:prev", async () => {
 			try {
 				if (stopped === -1) {
-					let time = await rpc.invoke('player:get-time');
+					let time = await rpc.invoke('player:time.get');
 					const pos = await player.get('playlist-pos');
 					if (time > 5) {
-						await rpc.invoke('player:set-time', 0);
+						await rpc.invoke('player:time.set', 0);
 					} else {
 						if (pos === 0) {
 							if (looping === false) {
-								await rpc.invoke('player:set-time', 0);
+								await rpc.invoke('player:time.set', 0);
 							} else {
 								await player.command('playlist-play-index', await player.get('playlist-count') - 1);
 								await rpc.invoke('player:play');
@@ -198,7 +195,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:loop', async (event, loop) => {
+		rpc.handle("player:loop", async (event, loop) => {
 			try {
 				await player.set('loop-file','no');
 				await player.set('loop-playlist','no')
@@ -213,15 +210,15 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:shuffle', (event, status) => {
+		rpc.handle("player:shuffle", (event, status) => {
 			try {
 				if (status !== null) shuffled = status;
 				if (shuffled) {
 					player.command('playlist-shuffle');
-					if (status !== null) rpc.invoke('plugins:shuffle-changed', true);
+					if (status !== null) rpc.invoke('modules:subscribe', 'shuffle-changed', true);
 				} else {
 					player.command('playlist-unshuffle');
-					if (status !== null) rpc.invoke('plugins:shuffle-changed', false);
+					if (status !== null) rpc.invoke('modules:subscribe', 'shuffle-changed', false);
 				}
 				return shuffled;
 			} catch (e) {
@@ -229,7 +226,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:replace', async (event, ids, paths) => {
+		rpc.handle("player:replace", async (event, ids, paths) => {
 			try {
 				if (!ids?.length || !paths?.length || ids.length !== paths.length) return;
 				reloading = false
@@ -258,23 +255,24 @@ async function startPlayer() {
 					}
 				}
 				rpc.invoke('player:shuffle', null);
+				rpc.invoke('modules:subscribe', 'playlist-changed');
 			} catch (e) {
 				console.error(`player:replace exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:list', async () => {
+		rpc.handle("player:list", async () => {
 			try {
 				const playlist = await player.get('playlist');
 				let list = (await Promise.allSettled(playlist.map(async song => `${idIndex[song.id]}: ${await rpc.invoke('library:uri', song.filename)}`))).map(promise => promise.value);
-				if (reloading) list[0] = list[0].replace("undefined", '(cached)')
+				if (reloading) list[0] = list[0].replace('undefined', '(cached)')
 				return list;
 			} catch (e) {
 				console.error(`player:replace exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:get-time', async () => {
+		rpc.handle("player:time.get", async () => {
 			try {
 				const time = await player.get('time-pos');
 				const position = Math.max(isNaN(time) ? 0 : time, 0);
@@ -284,77 +282,77 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:set-time', async (event, time) => {
+		rpc.handle("player:time.set", async (event, time) => {
 			try {
-				await player.command('seek', time, "absolute+exact");
-				return await rpc.invoke('player:get-time');
+				await player.command('seek', time, 'absolute+exact');
+				return await rpc.invoke('player:time.get');
 			} catch (e) {
-				console.error(`player:set-time exception: ${e}`);
+				console.error(`player:time.set exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:shift-time', async (event, offset) => {
+		rpc.handle("player:time.shift", async (event, offset) => {
 			try {
-				await player.command('seek', offset, "relative+exact");
-				return await rpc.invoke('player:get-time');
+				await player.command('seek', offset, 'relative+exact');
+				return await rpc.invoke('player:time.get');
 			} catch (e) {
-				console.error(`player:shift-time exception: ${e}`);
+				console.error(`player:time.shift exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:get-volume', async () => {
+		rpc.handle("player:volume.get", async () => {
 			try {
 				return await player.get('volume');
 			} catch (e) {
-				console.error(`player:get-volume exception: ${e}`);
+				console.error(`player:volume.get exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:set-volume', async (event, volume) => {
+		rpc.handle("player:volume.set", async (event, volume) => {
 			try {
 				await player.set('volume', Math.abs(Math.min(volume, 130)));
-				return await rpc.invoke('player:get-volume');
+				return await rpc.invoke('player:volume.get');
 			} catch (e) {
-				console.error(`player:set-volume exception: ${e}`);
+				console.error(`player:volume.set exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:shift-volume', async (event, offset) => {
+		rpc.handle("player:volume.shift", async (event, offset) => {
 			try {
-				const volume = Math.max(Math.min(await rpc.invoke('player:get-volume') + offset, 130), 0);
+				const volume = Math.max(Math.min(await rpc.invoke('player:volume.get') + offset, 130), 0);
 				await player.set('volume', volume);
 				return volume;
 			} catch (e) {
-				console.error(`player:shift-volume exception: ${e}`);
+				console.error(`player:volume.shift exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:get-status', () => {
+		rpc.handle("player:status", () => {
 			try {
 				return playing;
 			} catch (e) {
-				console.error(`player:get-status exception: ${e}`);
+				console.error(`player:status exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:get-looping', () => {
+		rpc.handle("player:looping", () => {
 			try {
 				return looping;
 			} catch (e) {
-				console.error(`player:get-looping exception: ${e}`);
+				console.error(`player:looping exception: ${e}`);
 			}
 		});
 
-		rpc.handle('player:get-shuffled', () => {
+		rpc.handle("player:shuffled", () => {
 			try {
 				return shuffled;
 			} catch (e) {
-				console.error(`player:get-shuffled exception: ${e}`);
+				console.error(`player:shuffled exception: ${e}`);
 			}
 		});
 
 		// dangerous methods
-		rpc.handle('player:get', async (event, ...args) => {
+		rpc.handle("player:get", async (event, ...args) => {
 			try {
 				return await player.get(...args);
 			} catch (e) {
@@ -362,7 +360,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:set', async (event, ...args) => {
+		rpc.handle("player:set", async (event, ...args) => {
 			try {
 				return await player.set(...args);
 			} catch (e) {
@@ -370,7 +368,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:on', async (event, ...args) => {
+		rpc.handle("player:on", async (event, ...args) => {
 			try {
 				return await player.on(...args);
 			} catch (e) {
@@ -378,7 +376,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:observe', async (event, ...args) => {
+		rpc.handle("player:observe", async (event, ...args) => {
 			try {
 				return await player.observe(...args);
 			} catch (e) {
@@ -386,7 +384,7 @@ async function startPlayer() {
 			}
 		});
 
-		rpc.handle('player:command', async (event, ...args) => {
+		rpc.handle("player:command", async (event, ...args) => {
 			try {
 				return await player.command(...args);
 			} catch (e) {
@@ -394,13 +392,13 @@ async function startPlayer() {
 			}
 		});
 
-		// other
-		player.observe('pause', paused => {
+		// behavior
+		player.observe("pause", paused => {
 			playing = !paused;
-			rpc.invoke('plugins:state-changed', playing);
+			rpc.invoke('modules:subscribe', 'state-changed', playing);
 		});
 
-		player.observe('playlist-pos', async pos => {
+		player.observe("playlist-pos", async pos => {
 			if (reloading && await player.get('playlist-pos') !== 0) {
 				reloading = false
 				await player.command('playlist-remove', 0);
@@ -416,39 +414,39 @@ async function startPlayer() {
 			}
 
 			await rpc.invoke('library:track-changed', id);
-			await rpc.invoke('plugins:track-changed', id);
+			await rpc.invoke('modules:subscribe', 'track-changed', id);
 		});
 
-		player.observe('loop-playlist', loop => {
+		player.observe("loop-playlist", loop => {
 			if (loop === "inf") {
 				looping = true;
-				rpc.invoke("plugins:loop-changed",true)
+				rpc.invoke('modules:subscribe', 'loop-changed',true)
 			} else {
 				looping = false;
-				rpc.invoke("plugins:loop-changed",false)
+				rpc.invoke('modules:subscribe', 'loop-changed',false)
 			}
 		});
-		player.observe('loop-file', loop => {
+		player.observe("loop-file", loop => {
 			if (loop === "inf") {
 				looping = null;
-				rpc.invoke("plugins:loop-changed",null)
+				rpc.invoke('modules:subscribe', 'loop-changed',null)
 			} else {
 				looping = false;
-				rpc.invoke("plugins:loop-changed",false)
+				rpc.invoke('modules:subscribe', 'loop-changed',false)
 			}
 		});
 
-		player.observe('time-pos', async () => {
-			const position = await rpc.invoke('player:get-time');
+		player.observe("time-pos", async () => {
+			const position = await rpc.invoke('player:time.get');
 			rpc.invoke('metadata:position-changed', position);
-			rpc.invoke('plugins:position-changed', position);
+			rpc.invoke('modules:subscribe', 'position-changed', position);
 		});
 
-		player.observe('volume', volume => {
-			rpc.invoke('plugins:volume-changed', volume);
+		player.observe("volume", volume => {
+			rpc.invoke('modules:subscribe', 'volume-changed', volume);
 		});
 
-		player.observe('duration', async duration => {
+		player.observe("duration", async duration => {
 			if (stopped !== -1) return;
 			const pos = await player.get('playlist-pos');
 			const playlist = await player.get('playlist');
@@ -458,16 +456,17 @@ async function startPlayer() {
 			rpc.invoke('metadata:duration-changed', id, duration);
 		});
 
-		player.on('seek', async () => {
-			rpc.invoke('plugins:seeked', await rpc.invoke('player:get-time'));
+		player.on("seek", async () => {
+			rpc.invoke('modules:subscribe', 'seeked', await rpc.invoke('player:time.get'));
 		});
 
-		player.on('file-loaded', async () => {
-			rpc.invoke('plugins:seeked', await rpc.invoke('player:get-time'));
+		player.on("file-loaded", async () => {
+			rpc.invoke('modules:subscribe', 'track-loaded');
+			rpc.invoke('modules:subscribe', 'seeked', await rpc.invoke('player:time.get'));
 		});
 
 		// default stuff
-		await rpc.invoke('player:set-volume', 50);
+		await rpc.invoke('player:volume.set', 50);
 	} catch (e) {
 		console.error(`Player failed to start ${e}`);
 	}

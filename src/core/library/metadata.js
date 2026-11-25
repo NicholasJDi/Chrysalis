@@ -10,25 +10,25 @@ let current = {};
 // the libraryId of the currently playing song
 let currentId = 0;
 // the current subtrack number
-let currentMix = 0;
+let currentMix = -1;
 // the current lyric of a songs default lyrics
 let currentLyric = "";
 
-// the processed metadata of the currently playing song 
+// the processed metadata of the currently playing song
 let processed = {};
 
 // create a new metadata file
-rpc.handle('metadata:create', (event, id, path, uri) => {
-	metadata[id] = { "version": 1, "path": uri, "title": Path.basename(uri) };
+rpc.handle("metadata:create", (event, id, path, uri) => {
+	metadata[id] = { 'version': 1, 'path': uri, 'title': Path.basename(uri) };
 	rpc.invoke('metadata:save', id, path);
 })
 
 // load metadata from a crsim file
-rpc.handle('metadata:load', async (event, id, path) => {
+rpc.handle("metadata:load", async (event, id, path) => {
 	try {
 		metadata[id] = JSON.parse(
 			await fs.readFile(
-				path, "utf8"
+				path, 'utf8'
 			)
 		);
 		return metadata[id].path;
@@ -38,12 +38,12 @@ rpc.handle('metadata:load', async (event, id, path) => {
 });
 
 // save metadata to a crsim file
-rpc.handle('metadata:save', async (event, id, path) => {
+rpc.handle("metadata:save", async (event, id, path) => {
 	try {
 		await fs.mkdir(Path.dirname(path), { recursive: true });
 		await fs.writeFile(
 			path,
-			JSON.stringify(metadata[id], null, "\t")
+			JSON.stringify(metadata[id], null, '\t')
 		);
 	} catch (e) {
 		console.error(`metadata:save exception: ${e}`);
@@ -51,10 +51,10 @@ rpc.handle('metadata:save', async (event, id, path) => {
 });
 
 // get a metadata dict
-rpc.handle('metadata:get', (event, id, property = "") => {
+rpc.handle("metadata:get", (event, id, property = "") => {
 	if (!id) return;
-	if (typeof property !== "string") throw new Error("Invalid property name");
-	if (!metadata[id]) throw new Error("Cannot get metadata that has not been loaded");
+	if (typeof property !== 'string') throw new Error('Invalid property name');
+	if (!metadata[id]) throw new Error('Cannot get metadata that has not been loaded');
 	if (property.length) {
 		return metadata[id][property];
 	}
@@ -62,10 +62,10 @@ rpc.handle('metadata:get', (event, id, property = "") => {
 });
 
 // set a metadata dict or one of its properties
-rpc.handle('metadata:set', (event, id, value, property = "") => {
+rpc.handle("metadata:set", (event, id, value, property = "") => {
 	if (!id) return;
-	if (typeof property !== "string") throw new Error("Invalid property name");
-	if (!metadata[id]) throw new Error("Cannot set metadata that has not been loaded");
+	if (typeof property !== 'string') throw new Error('Invalid property name');
+	if (!metadata[id]) throw new Error('Cannot set metadata that has not been loaded');
 	if (property.length) {
 		metadata[id][property] = value;
 	} else {
@@ -77,14 +77,14 @@ rpc.handle('metadata:set', (event, id, value, property = "") => {
 });
 
 // update the current song
-rpc.handle('metadata:update', (event, id = currentId) => {
+rpc.handle("metadata:update", (event, id = currentId) => {
 	try {
 		if (id !== currentId) {
 			currentId = id;
-			currentMix = 0;
+			currentMix = -1;
 			if (!currentId || !metadata[id]) current = {};
 			else current = structuredClone(metadata[id]);
-			if (current?.mix?.["1"] && !current.mix["1"].start > 0) {
+			if (current?.mix?.["1"] && !(current.mix["1"].start > 0)) {
 				rpc.invoke('metadata:position-changed', 0);
 				return;
 			}
@@ -96,7 +96,7 @@ rpc.handle('metadata:update', (event, id = currentId) => {
 			processed.id = currentId;
 			if (currentMix > 0) {
 				processed.subId = currentMix;
-				current.mix["_processed"] = currentMix;
+				current.mix['_processed'] = currentMix;
 				const mix = processed.mix[currentMix.toString()];
 				processed = rpc.invoke('metadata:merge', processed, mix, 'mix');
 			}
@@ -109,7 +109,7 @@ rpc.handle('metadata:update', (event, id = currentId) => {
 					processed.art?.album ??
 					processed.art?.type ??
 					processed.art?.artist;
-				if (art) processed.art["_processed"] = rpc.invoke('library:uri', art);
+				if (art) processed.art['_processed'] = rpc.invoke('library:uri', art);
 			} catch (e) {
 				console.warn(`metadata:update (art) exception: ${e}`);
 			}
@@ -119,23 +119,23 @@ rpc.handle('metadata:update', (event, id = currentId) => {
 					processed.art?.background?.album ??
 					processed.art?.background?.type ??
 					processed.art?.background?.artist;
-				if (background) processed.art.background["_processed"] = rpc.invoke('library:uri', background);
+				if (background) processed.art.background['_processed'] = rpc.invoke('library:uri', background);
 			} catch (e) {
 				console.warn(`metadata:update (art.background) exception: ${e}`);
 			}
 		}
 
-		rpc.invoke('plugins:metadata-changed', current, processed);
+		rpc.invoke('modules:subscribe', 'metadata-changed', current, processed);
 	} catch (e) {
 		console.error(`metadata:update exception: ${e}`);
 	}
 });
 
-rpc.handle('metadata:position-changed', (event, time) => {
+rpc.handle("metadata:position-changed", (event, time) => {
 	try {
 		let mix = 0;
-		let lyric = "";
-		if (current?.mix?.["_processed"]) {
+		let lyric = '';
+		if (current?.mix) {
 			mix = Object.entries(current.mix).find(([id, mix]) => {
 				if (typeof mix === "object" && !Array.isArray(mix)) {
 					const start = mix.start ?? 0;
@@ -152,7 +152,7 @@ rpc.handle('metadata:position-changed', (event, time) => {
 				for (let i = 0; i < events.length; i++) {
 					if (last !== null) {
 						const event = events[i];
-						const position = typeof event === "object" && !Array.isArray(event) ? Number(Object.keys(event)[0]) : NaN;
+						const position = typeof event === 'object' && !Array.isArray(event) ? Number(Object.keys(event)[0]) : NaN;
 						if ((isNaN(position) ? Number(event) : position) > time || i === events.length - 1) {
 							i = last;
 							last = null;
@@ -165,7 +165,7 @@ rpc.handle('metadata:position-changed', (event, time) => {
 						if (typeof event === "object" && !Array.isArray(event)) {
 							const positions = Object.keys(event);
 							if (positions[0] <= time) {
-								lyric = "";
+								lyric = '';
 								for (const position of positions) {
 									if (Number(position) <= time) {
 										lyric += event[position];
@@ -176,7 +176,7 @@ rpc.handle('metadata:position-changed', (event, time) => {
 							}
 						} else if (typeof event === "number") {
 							if (Number(event) <= time) {
-								lyric = "";
+								lyric = '';
 								break;
 							}
 						}
@@ -184,7 +184,7 @@ rpc.handle('metadata:position-changed', (event, time) => {
 				}
 			} else if (processed.lyrics.Default.line) {
 				const index = processed.lyrics.Default.line.index;
-				const lines = processed.lyrics.Default.line["_default"];
+				const lines = processed.lyrics.Default.line['_default'];
 				for (let i = 0; i < index.length; i++) {
 					if (index[i] > time) {
 						break;
@@ -205,12 +205,12 @@ rpc.handle('metadata:position-changed', (event, time) => {
 	}
 });
 
-rpc.handle('metadata:duration-changed', async (event, id, duration) => {
-	if (id === currentId && duration && !await rpc.invoke('metadata:get', id, "length")) rpc.invoke('metadata:set', id, duration, "length");
+rpc.handle("metadata:duration-changed", async (event, id, duration) => {
+	if (id === currentId && duration && !await rpc.invoke('metadata:get', id, 'length')) rpc.invoke('metadata:set', id, duration, 'length');
 });
 
 // merge a 'dict' into a 'base' dict while respecting ignored tags (makes a new dict) if 'key' is provided removes it from the merged dict
-rpc.handle('metadata:merge', (event, base, dict, key = null) => {
+rpc.handle("metadata:merge", (event, base, dict, key = null) => {
 	const to = structuredClone(dict)
 	const out = structuredClone(base)
 	for (const key of Object.keys(to)) {
@@ -228,9 +228,9 @@ rpc.handle('metadata:merge', (event, base, dict, key = null) => {
 });
 
 // flatten the crsim dict into externally valid crsim keys, if 'process' is false ignores non static data
-rpc.handle('metadata:flatten', (event, dict, process = true, history = "", section = "crsim:") => {
-	if (typeof dict !== "object" || Array.isArray(dict)) return {};
-	if (dict["_internal"]) return {};
+rpc.handle("metadata:flatten", (event, dict, process = true, history = "", section = "crsim:") => {
+	if (typeof dict !== 'object' || Array.isArray(dict)) return {};
+	if (dict['_internal']) return {};
 
 	let out = {};
 	for (const key of Object.keys(dict)) {
@@ -239,17 +239,17 @@ rpc.handle('metadata:flatten', (event, dict, process = true, history = "", secti
 
 		if (process && key === "_processed") {
 			if (typeof dict[key] === "object" && !array) {
-				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history, `${section.startsWith(".") ? "._" + section.slice(1) : "_" + section}`) };
-			} else if (!section.startsWith("_") && !section.startsWith("._")) {
-				out[history + `${section.startsWith(".") ? "._" + section.slice(0) : "_" + section}`] = value;
+				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history, `${section.startsWith('.') ? '._' + section.slice(1) : '_' + section}`) };
+			} else if (!section.startsWith('_') && !section.startsWith('._')) {
+				out[history + `${section.startsWith('.') ? '._' + section.slice(0) : '_' + section}`] = value;
 			}
 		} else {
 			if (typeof dict[key] === "object" && !array) {
-				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history + section, (section).endsWith(":") ? `${key}` : `.${key}`) };
+				out = { ...out, ...rpc.invoke('metadata:flatten', dict[key], process, history + section, (section).endsWith(':') ? `${key}` : `.${key}`) };
 			} else if (key === "_default") {
 				out[history + section] = value;
 			} else if (!key.startsWith("_")) {
-				out[`${history + section}${(section).endsWith(":") ? key : `.${key}`}`] = value;
+				out[`${history + section}${(section).endsWith(':') ? key : `.${key}`}`] = value;
 			}
 		}
 	}
@@ -258,34 +258,34 @@ rpc.handle('metadata:flatten', (event, dict, process = true, history = "", secti
 });
 
 // get a metadata property by crsim tag
-rpc.handle('metadata:get-crsim', async (event, tag = "", id = 0) => {
+rpc.handle("metadata:get-crsim", async (event, tag = "", id = 0) => {
 	if (!tag) return await rpc.invoke('metadata:flatten', id && id !== '0' ? await rpc.invoke('metadata:get', id.toString()) : current);
 	tag = tag.toString().replaceAll(/\s+/g, '');
-	if (tag.startsWith("crsim:")) tag = tag.replace("crsim:", '');
+	if (tag.startsWith('crsim:')) tag = tag.replace('crsim:', '');
 
 	const tags = tag.split('.');
 	let dict = id && id !== '0' ? metadata[id] : current;
 	for (const section of tags) {
-		if (typeof dict === "undefined") return '';
+		if (typeof dict === 'undefined') return '';
 		if (section.startsWith("_")) {
-			const sectionName = section.replace("_", '');
-			dict = dict?.[sectionName]?.["_processed"];
+			const sectionName = section.replace('_', '');
+			dict = dict?.[sectionName]?.['_processed'];
 			continue;
 		}
 		dict = dict?.[section];
 	}
-	if (typeof dict === "object" && !Array.isArray(dict)) dict = dict?.["_default"];
-	if (typeof dict === "undefined") return '';
+	if (typeof dict === 'object' && !Array.isArray(dict)) dict = dict?.['_default'];
+	if (typeof dict === 'undefined') return '';
 
 	return Array.isArray(dict) ? JSON.stringify(dict) : dict.toString();
 });
 
 // set or create a metadata property by crsim tag
-rpc.handle('metadata:set-crsim', (event, tag, value, id = 0) => {
+rpc.handle("metadata:set-crsim", (event, tag, value, id = 0) => {
 	if (!tag) return;
-	if (typeof value === "undefined") return;
+	if (typeof value === 'undefined') return;
 	tag = tag.toString().replaceAll(/\s+/g, '');
-	if (tag.startsWith("crsim:")) tag = tag.replace("crsim:", '');
+	if (tag.startsWith('crsim:')) tag = tag.replace('crsim:', '');
 	if (!id || id === '0') id = currentId;
 
 	const tags = tag.split('.');
@@ -294,7 +294,7 @@ rpc.handle('metadata:set-crsim', (event, tag, value, id = 0) => {
 	for (let section of tags) {
 		let sectionName;
 		if (section.startsWith("_")) {
-			sectionName = section.replace("_", '');
+			sectionName = section.replace('_', '');
 		}
 		section = sectionName ?? section;
 
@@ -303,28 +303,28 @@ rpc.handle('metadata:set-crsim', (event, tag, value, id = 0) => {
 		if (typeof tempDict === "undefined") {
 			tempDict = {};
 			dict[section] = tempDict;
-			section = "";
+			section = '';
 		} else if (typeof tempDict !== "object" || Array.isArray(tempDict)) {
-			tempDict = { "_default": tempDict };
+			tempDict = { '_default': tempDict };
 			dict[section] = tempDict;
-			section = "";
+			section = '';
 		}
 		dict = tempDict;
 
 		if (sectionName) {
 			if (!section) {
 				tempDict = {};
-				dict["_processed"] = tempDict;
+				dict['_processed'] = tempDict;
 				dict = tempDict;
 			} else {
 				// Enforce _processed
-				tempDict = dict["_processed"];
-				if (typeof tempDict === "undefined") {
+				tempDict = dict['_processed'];
+				if (typeof tempDict === 'undefined') {
 					tempDict = {};
-					dict["_processed"] = tempDict;
-				} else if (typeof tempDict !== "object" || Array.isArray(tempDict)) {
-					tempDict = { "_default": tempDict };
-					dict["_processed"] = tempDict;
+					dict['_processed'] = tempDict;
+				} else if (typeof tempDict !== 'object' || Array.isArray(tempDict)) {
+					tempDict = { '_default': tempDict };
+					dict['_processed'] = tempDict;
 				}
 				dict = tempDict;
 			}
@@ -332,20 +332,20 @@ rpc.handle('metadata:set-crsim', (event, tag, value, id = 0) => {
 	}
 
 	if (tag.startsWith("_")) {
-		const tagName = tag.replace("_", '');
+		const tagName = tag.replace('_', '');
 		let tempDict = dict[tagName];
 		if (typeof tempDict === "undefined") {
 			tempDict = {};
 			dict[tagName] = tempDict;
 		} else if (typeof tempDict !== "object" || Array.isArray(tempDict)) {
-			tempDict = { "_default": tempDict };
+			tempDict = { '_default': tempDict };
 			dict[tagName] = tempDict;
 		}
 		dict = tempDict;
 
-		dict["_processed"] = value;
+		dict['_processed'] = value;
 	} else if (typeof dict[tag] === "object" && !Array.isArray(dict[tag])) {
-		dict[tag]["_default"] = value;
+		dict[tag]['_default'] = value;
 	} else {
 		dict[tag] = value;
 	}

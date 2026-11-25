@@ -10,18 +10,18 @@ if (!gotLock) {
 } else {
 	const { BrowserWindow } = require("electron");
 	const core = require("./core");
-	const plugins = require("./plugins")
+	const modules = require("./modules/index")
 
 	let window;
 	let allowClose = false;
 
 	function createWindow() {
 		window = new BrowserWindow({
-			backgroundColor: "#3d3d3d",
+			backgroundColor: '#3d3d3d',
 			autoHideMenuBar:true,
 			fullscreenable:false,
 			webPreferences:{
-				preload: __dirname + "/preload.js",
+				preload: __dirname + '/preload.js',
 				backgroundThrottling:true,
 				nodeIntegration: false,
 				contextIsolation: true
@@ -29,16 +29,17 @@ if (!gotLock) {
 			show:false
 		});
 
-		window.loadFile("src/renderer/index.html");
+		window.loadFile('src/renderer/index.html');
 	}
 
 	// disable automatic mpris and related
-	app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
-	app.setName("Chrysalis");
+	app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService');
+	app.setName('Chrysalis');
 	app.whenReady().then(async () => {
+		core.settings.initialize();
 		createWindow();
 		core.rpc.allowSends(window);
-		window.once('ready-to-show', async () => {
+		window.once("ready-to-show", async () => {
 			await window.maximize();
 			window.show();
 		});
@@ -46,14 +47,19 @@ if (!gotLock) {
 		await core.player.startPlayer();
 		core.library.init()
 		core.command.prepareServer();
-		await plugins.doPluginStuff();
+		await modules.doModuleStuff();
 	});
 
 	function registerProcesses() {
-		core.rpc.handle('app:quit', () => {
+		core.rpc.handle("app:quit", async () => {
+			await core.rpc.invoke('modules:subscribe', 'quit-requested');
 			app.quit();
 		});
+		core.rpc.handle("app:version", () => {
+			return app.getVersion();
+		});
 		app.on("before-quit", () => {
+			core.rpc.invoke('modules:subscribe', 'quitting');
 			allowClose = true;
 		});
 		window.on("close", (event) => {
@@ -62,7 +68,7 @@ if (!gotLock) {
 				window.hide();
 			}
 		});
-		core.rpc.handle('app:raise', () => {
+		core.rpc.handle("app:raise", () => {
 			if (window) {
 				if (window.isMinimized())
 					window.restore();

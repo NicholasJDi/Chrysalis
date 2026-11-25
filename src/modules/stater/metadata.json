@@ -1,0 +1,32 @@
+{
+	"uuid":"stater@chrysalis",
+	"name":"State Saver",
+	"description": "Save the state of Chrysalis when closing and load it on statup,",
+	"author": "NicholasJDi",
+	"version": "0.1.0",
+	"api":"1.1.1",
+	"permissions": {
+		"main": [
+			"app:version",
+			"player:play",
+			"player:pause",
+			"player:stop",
+			"player:time.set",
+			"player:volume.set",
+			"player:loop",
+			"player:shuffle",
+			"library:expand-path"
+		],
+		"subscribe": [
+			"quit-requested",
+			"playlist-changed",
+			"track-changed",
+			"loop-changed",
+			"shuffle-changed",
+			"state-changed",
+			"position-changed",
+			"seeked",
+			"volume-changed"
+		]
+	}
+}
